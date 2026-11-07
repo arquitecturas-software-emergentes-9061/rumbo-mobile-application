@@ -1,4 +1,10 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rumbo_mobile_application/injections.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/ble_diagnostics_screen.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/bloc/ble_diagnostics_bloc.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/bloc/ble_diagnostics_event.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/route/route_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/search/search_screen.dart';
@@ -8,13 +14,26 @@ import 'package:rumbo_mobile_application/shared/presentation/widgets/rumbo_shell
 GoRouter buildRouter() => GoRouter(
   initialLocation: '/home',
   routes: [
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.android)
+      GoRoute(
+        path: '/developer/ble',
+        builder: (context, state) => BlocProvider<BleDiagnosticsBloc>(
+          create: (_) =>
+              serviceLocator<BleDiagnosticsBloc>()
+                ..add(const BleDiagnosticsStarted()),
+          child: const BleDiagnosticsScreen(),
+        ),
+      ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           RumboShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const HomeScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -27,7 +46,10 @@ GoRouter buildRouter() => GoRouter(
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/route', builder: (context, state) => const RouteScreen()),
+            GoRoute(
+              path: '/route',
+              builder: (context, state) => const RouteScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
