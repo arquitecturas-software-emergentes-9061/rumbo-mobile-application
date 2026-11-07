@@ -27,8 +27,8 @@ Cada módulo sigue el estilo de Restock:
   presentation/      # pantallas, widgets y BLoC por flujo
 ```
 
-Las dependencias apuntan hacia el dominio. Los módulos se comunican mediante contratos de aplicación y valores explícitos, evitando importar modelos de transporte de otro contexto. `shared` contiene solo piezas transversales (tema, router, configuración de API y shell), sin reglas de negocio.
+El dominio no depende de Flutter ni de infraestructura. El contrato del repositorio vive en `domain/repositories`; la sesión de captura genérica contiene ubicación y condición, mientras que los filtros de escaneo Android viven en infraestructura. La implementación convierte los modelos del proveedor de plataforma a entidades del dominio. La fachada de aplicación coordina el repositorio y el servicio de permisos, y el BLoC transforma eventos en estado de presentación. Los módulos se comunican mediante valores explícitos, evitando importar modelos de transporte de otro contexto. `shared` contiene solo piezas transversales (tema, router, configuración de API y shell), sin reglas de negocio.
 
 ## Estado de esta entrega
 
-Solo están creadas las piezas que tienen uso en el arranque: tema, router, configuración de API, composición de dependencias y pantallas de marcador de posición. No hay entidades ni repositorios inventados sin un caso de uso, y ninguna pantalla afirma resultados de BLE, rutas o datos reales.
+La base contiene tema, router, configuración de API, composición de dependencias y pantallas de marcador de posición. La Fase 1 agrega entidades y un contrato de repositorio BLE en Navigation, una fachada de aplicación, modelos y un proveedor de canales de plataforma, un servicio Android para escaneo y CSV, y un BLoC con pantalla de diagnóstico disponible solo en debug. La Fase 2 agrega un modelo de mediciones por identificador lógico y algoritmos de comparación RSSI en Dart puro. La captura sigue siendo Android; el adaptador iOS está diseñado pero pendiente. Véanse [Captura de RSSI de referencia](ble_reference_capture.md) y [Fase 2 multiplataforma](multiplatform_ble_phase2.md).
