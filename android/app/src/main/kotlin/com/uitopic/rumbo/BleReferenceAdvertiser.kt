@@ -6,21 +6,21 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
-import android.os.ParcelUuid
+import java.nio.ByteBuffer
 import java.util.UUID
 
-/** Debug experiment only: advertises a stable service UUID so a second phone can measure RSSI. */
+/** Debug experiment only: advertises an iBeacon identity for RSSI capture. */
 class BleReferenceAdvertiser(context: Context) {
     private val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private var callback: AdvertiseCallback? = null
 
-    fun start(serviceUuid: String, onResult: (Result<Unit>) -> Unit) {
+    fun start(beaconUuid: String, onResult: (Result<Unit>) -> Unit) {
         if (callback != null) {
             onResult(Result.failure(IllegalStateException("El emisor BLE ya está activo.")))
             return
         }
-        val uuid = runCatching { UUID.fromString(serviceUuid.trim()) }.getOrElse {
-            onResult(Result.failure(IllegalArgumentException("Ingresa un UUID de servicio válido.")))
+        val uuid = runCatching { UUID.fromString(beaconUuid.trim()) }.getOrElse {
+            onResult(Result.failure(IllegalArgumentException("Ingresa un UUID de baliza válido.")))
             return
         }
         try {
@@ -48,8 +48,8 @@ class BleReferenceAdvertiser(context: Context) {
                     .setConnectable(false)
                     .build(),
                 AdvertiseData.Builder()
-                    .setIncludeTxPowerLevel(true)
-                    .addServiceUuid(ParcelUuid(uuid))
+                    .setIncludeTxPowerLevel(false)
+                    .addManufacturerData(0x004C, beaconPayload(uuid))
                     .build(),
                 active,
             )
@@ -58,6 +58,16 @@ class BleReferenceAdvertiser(context: Context) {
             onResult(Result.failure(IllegalStateException("Android denegó el permiso para anunciar BLE.", error)))
         }
     }
+
+    private fun beaconPayload(uuid: UUID): ByteArray = ByteBuffer.allocate(23)
+        .put(0x02.toByte())
+        .put(0x15.toByte())
+        .putLong(uuid.mostSignificantBits)
+        .putLong(uuid.leastSignificantBits)
+        .putShort(1.toShort())
+        .putShort(1.toShort())
+        .put((-59).toByte()) // Nominal reference power, not a measured calibration.
+        .array()
 
     fun stop() {
         val active = callback ?: return

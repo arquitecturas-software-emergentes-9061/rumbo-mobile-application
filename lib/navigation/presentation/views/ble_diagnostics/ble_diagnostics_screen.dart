@@ -99,7 +99,7 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
           setState(() {
             _advertisingReference = true;
             _advertiserMessage =
-                'Emitiendo UUID BLE. Usa ese mismo UUID para filtrar el teléfono receptor.';
+                'Emitiendo iBeacon UUID/1/1. Descúbrelo y selecciona su dirección en el receptor.';
           });
         }
       }
@@ -140,12 +140,12 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Emisor BLE de referencia', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      const Text('Modo de prueba Android. Anuncia un UUID real por radio; mide RSSI desde otro teléfono.'),
+                      const Text('Modo de prueba Android. Anuncia iBeacon UUID/1/1 por radio; mide RSSI desde otro teléfono.'),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _advertiserUuid,
                         enabled: !_advertisingReference && !_advertiserBusy,
-                        decoration: const InputDecoration(labelText: 'UUID de servicio', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'UUID de baliza iBeacon', border: OutlineInputBorder()),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(

@@ -33,7 +33,9 @@ class AndroidBlePermissionService implements BlePermissionService {
     final sdk = await blePlatformDataProvider.androidSdkVersion();
     if (sdk < 31) return false;
     final advertise = await Permission.bluetoothAdvertise.request();
-    return advertise.isGranted;
+    if (!advertise.isGranted) return false;
+    final connect = await Permission.bluetoothConnect.request();
+    return connect.isGranted;
   }
 
   @override

@@ -37,7 +37,7 @@ class FakeBleDiagnosticsRepository
   Future<void> stop() async => stopCalls++;
 
   @override
-  Future<void> startReferenceAdvertiser(String serviceUuid) async =>
+  Future<void> startReferenceAdvertiser(String beaconUuid) async =>
       advertiseCalls++;
 
   @override

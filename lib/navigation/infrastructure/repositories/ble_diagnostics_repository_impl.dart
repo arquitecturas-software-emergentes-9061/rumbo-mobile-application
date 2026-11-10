@@ -29,8 +29,8 @@ class BleDiagnosticsRepositoryImpl
   Future<void> stop() => blePlatformDataProvider.stop();
 
   @override
-  Future<void> startReferenceAdvertiser(String serviceUuid) =>
-      blePlatformDataProvider.startReferenceAdvertiser(serviceUuid);
+  Future<void> startReferenceAdvertiser(String beaconUuid) =>
+      blePlatformDataProvider.startReferenceAdvertiser(beaconUuid);
 
   @override
   Future<void> stopReferenceAdvertiser() =>

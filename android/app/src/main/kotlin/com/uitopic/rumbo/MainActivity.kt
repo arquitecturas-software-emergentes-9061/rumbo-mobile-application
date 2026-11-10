@@ -18,7 +18,7 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "androidSdkVersion" -> result.success(Build.VERSION.SDK_INT)
                 "startReferenceAdvertiser" -> referenceAdvertiser.start(
-                    call.argument<String>("serviceUuid").orEmpty(),
+                    call.argument<String>("beaconUuid").orEmpty(),
                 ) { outcome ->
                     runOnUiThread {
                         outcome.fold(

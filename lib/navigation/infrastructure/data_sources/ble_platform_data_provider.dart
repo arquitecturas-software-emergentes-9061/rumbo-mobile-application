@@ -21,8 +21,8 @@ class BlePlatformDataProvider {
 
   Future<void> stop() => _methods.invokeMethod<void>('stop');
 
-  Future<void> startReferenceAdvertiser(String serviceUuid) =>
-      _methods.invokeMethod<void>('startReferenceAdvertiser', {'serviceUuid': serviceUuid});
+  Future<void> startReferenceAdvertiser(String beaconUuid) =>
+      _methods.invokeMethod<void>('startReferenceAdvertiser', {'beaconUuid': beaconUuid});
 
   Future<void> stopReferenceAdvertiser() =>
       _methods.invokeMethod<void>('stopReferenceAdvertiser');
