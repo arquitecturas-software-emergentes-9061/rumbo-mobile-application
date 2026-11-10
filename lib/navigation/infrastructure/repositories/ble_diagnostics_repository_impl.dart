@@ -29,6 +29,14 @@ class BleDiagnosticsRepositoryImpl
   Future<void> stop() => blePlatformDataProvider.stop();
 
   @override
+  Future<void> startReferenceAdvertiser(String serviceUuid) =>
+      blePlatformDataProvider.startReferenceAdvertiser(serviceUuid);
+
+  @override
+  Future<void> stopReferenceAdvertiser() =>
+      blePlatformDataProvider.stopReferenceAdvertiser();
+
+  @override
   Future<BleScanSnapshot> snapshot() async {
     final model = await blePlatformDataProvider.snapshot();
     return model.toDomain();

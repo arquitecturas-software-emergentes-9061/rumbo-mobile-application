@@ -31,3 +31,9 @@ La pantalla muestra la ruta del archivo `rumbo_rssi_reference.csv` en el almacen
 - **WI-SP01-01 (Julio):** la selección de balizas y los puntos físicos de referencia dependen de su escenario. Esta entrega no contiene mediciones físicas ni estimaciones de precisión.
 
 Las comprobaciones con hardware pendientes son: visibilidad de las balizas, concesión y revocación de permisos en versiones reales de Android, continuidad con pantalla bloqueada, comportamiento de direcciones aleatorias, interrupción por Bluetooth apagado y lectura del CSV después de recorridos reales.
+
+## Prueba de PR-198 con un teléfono como emisor
+
+No se necesitan balizas comerciales para el primer experimento. En un segundo teléfono Android compatible, abrir **Inicio → Diagnóstico BLE → Emisor BLE de referencia**, dejar el UUID de servicio de prueba o ingresar otro, conceder el permiso **Dispositivos cercanos** y pulsar **Emitir referencia BLE**. El teléfono anuncia ese servicio por radio. En el teléfono Rumbo receptor, copiar el mismo UUID en el filtro de captura y registrar los puntos físicos medidos, por ejemplo 1 m, 3 m y 5 m, junto con línea de vista, pared y teléfono quieto/caminando. Repetir cada condición y detener ambos lados al terminar.
+
+La opción usa el emisor BLE del sistema Android; no inventa mediciones RSSI. Requiere Android 12 o posterior con Bluetooth LE Peripheral/Advertiser disponible. En teléfonos sin esa capacidad, usar una laptop con adaptador BLE que anuncie un servicio GATT, o dos teléfonos compatibles. La distancia conocida se registra como referencia del ensayo; RSSI no se convierte a metros. El modo emisor es solo para diagnóstico y se detiene al salir de la pantalla o cerrar la actividad.

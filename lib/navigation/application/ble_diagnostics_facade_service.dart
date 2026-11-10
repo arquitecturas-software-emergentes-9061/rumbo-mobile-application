@@ -30,6 +30,15 @@ class BleDiagnosticsFacadeService<T extends BleCaptureSession> {
 
   Future<void> stop() => bleDiagnosticsRepository.stop();
 
+  Future<bool> startReferenceAdvertiser(String serviceUuid) async {
+    if (!await blePermissionService.requestAdvertisePermission()) return false;
+    await bleDiagnosticsRepository.startReferenceAdvertiser(serviceUuid);
+    return true;
+  }
+
+  Future<void> stopReferenceAdvertiser() =>
+      bleDiagnosticsRepository.stopReferenceAdvertiser();
+
   Future<BleScanSnapshot> snapshot() => bleDiagnosticsRepository.snapshot();
 
   Future<void> openSettings() => blePermissionService.openSettings();

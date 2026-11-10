@@ -32,6 +32,12 @@ class BleDiagnosticsBloc
   final Map<String, BleObservation> _latest = {};
   bool _starting = false;
 
+  Future<bool> startReferenceAdvertiser(String serviceUuid) =>
+      bleDiagnosticsFacadeService.startReferenceAdvertiser(serviceUuid);
+
+  Future<void> stopReferenceAdvertiser() =>
+      bleDiagnosticsFacadeService.stopReferenceAdvertiser();
+
   Future<void> _onRefreshed(
     BleDiagnosticsEvent event,
     Emitter<BleDiagnosticsState> emit,

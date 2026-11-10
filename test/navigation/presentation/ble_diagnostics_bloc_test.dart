@@ -17,6 +17,8 @@ class FakeBleDiagnosticsRepository
   int discoverCalls = 0;
   int captureCalls = 0;
   int stopCalls = 0;
+  int advertiseCalls = 0;
+  int stopAdvertiseCalls = 0;
 
   @override
   Stream<BleScanEvent> get events => controller.stream;
@@ -35,6 +37,13 @@ class FakeBleDiagnosticsRepository
   Future<void> stop() async => stopCalls++;
 
   @override
+  Future<void> startReferenceAdvertiser(String serviceUuid) async =>
+      advertiseCalls++;
+
+  @override
+  Future<void> stopReferenceAdvertiser() async => stopAdvertiseCalls++;
+
+  @override
   Future<BleScanSnapshot> snapshot() async => const BleScanSnapshot(
     status: 'idle',
     savedCount: 2,
@@ -47,9 +56,13 @@ class FakeBlePermissionService implements BlePermissionService {
   FakeBlePermissionService(this.granted);
 
   bool granted;
+  bool advertiseGranted = true;
 
   @override
   Future<bool> requestScanPermissions() async => granted;
+
+  @override
+  Future<bool> requestAdvertisePermission() async => advertiseGranted;
 
   @override
   Future<void> openSettings() async {}
@@ -86,6 +99,22 @@ void main() {
     await completed;
 
     expect(repository.discoverCalls, 0);
+  });
+
+  test('does not advertise when nearby-device permission is denied', () async {
+    permissions.advertiseGranted = false;
+
+    final started = await bloc.startReferenceAdvertiser('service-uuid');
+
+    expect(started, isFalse);
+    expect(repository.advertiseCalls, 0);
+  });
+
+  test('starts the reference advertiser through the repository', () async {
+    final started = await bloc.startReferenceAdvertiser('service-uuid');
+
+    expect(started, isTrue);
+    expect(repository.advertiseCalls, 1);
   });
 
   test('does not start a second capture while one is active', () async {
