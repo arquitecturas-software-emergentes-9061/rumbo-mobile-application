@@ -38,6 +38,49 @@ void main(List<String> args) {
     return;
   }
 
+  if (args.length == 2 && args.first == 'summarize') {
+    try {
+      final measurements = codec.decode(File(args[1]).readAsStringSync());
+      if (measurements.isEmpty) {
+        throw const FormatException('No hay lecturas RSSI en el archivo.');
+      }
+      const analyzer = RssiAnalysisService();
+      final entries = analyzer.summarize(measurements).entries.toList()
+        ..sort((a, b) {
+          final location = a.key.referenceLocation.compareTo(
+            b.key.referenceLocation,
+          );
+          if (location != 0) return location;
+          final condition = a.key.condition.compareTo(b.key.condition);
+          if (condition != 0) return condition;
+          return a.key.beaconId.toString().compareTo(
+            b.key.beaconId.toString(),
+          );
+        });
+      for (final entry in entries) {
+        final key = entry.key;
+        final statistics = entry.value;
+        stdout.writeln(
+          '${key.sourceId} | ${key.runId} | '
+          '${key.referenceLocation} | ${key.condition} | ${key.beaconId}: '
+          'n=${statistics.count}, '
+          'media=${statistics.meanDbm.toStringAsFixed(2)} dBm, '
+          'mediana=${statistics.medianDbm.toStringAsFixed(2)} dBm, '
+          'desviación=${statistics.standardDeviationDb.toStringAsFixed(2)} dB, '
+          'MAD=${statistics.medianAbsoluteDeviationDb.toStringAsFixed(2)} dB, '
+          'atípicas=${statistics.outlierCount}',
+        );
+      }
+    } on FormatException catch (error) {
+      stderr.writeln(error.message);
+      exitCode = 2;
+    } on FileSystemException catch (error) {
+      stderr.writeln(error.message);
+      exitCode = 2;
+    }
+    return;
+  }
+
   if (args.length == 3 && args.first == 'compare') {
     try {
       final calibration = codec.decode(File(args[1]).readAsStringSync());
@@ -78,6 +121,7 @@ void main(List<String> args) {
   stderr.writeln(
     'Uso:\n'
     '  dart run tool/rssi_analysis.dart normalize-android <fase1.csv> <comun.csv> <source_id> <run_id>\n'
+    '  dart run tool/rssi_analysis.dart summarize <comun.csv>\n'
     '  dart run tool/rssi_analysis.dart compare <calibracion.csv> <prueba.csv>',
   );
   exitCode = 2;
