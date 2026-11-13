@@ -79,7 +79,10 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  late final _email = TextEditingController(text: widget.session.email);
+  // Only sign-in reuses the last email; a new registration always starts empty.
+  late final _email = TextEditingController(
+    text: widget.signUp ? '' : widget.session.email,
+  );
   final _password = TextEditingController();
   bool _visible = false;
   bool _terms = false;

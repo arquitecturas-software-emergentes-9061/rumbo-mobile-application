@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rumbo_mobile_application/iam/application/session_facade.dart';
+import 'package:rumbo_mobile_application/iam/infrastructure/secure_session_storage.dart';
 import 'package:rumbo_mobile_application/iam/presentation/auth_screens.dart';
+import 'package:rumbo_mobile_application/shared/infrastructure/navigation/router.dart';
 import 'session_test.dart' show MemoryStorage, facade, seed;
 
 void main() {
@@ -113,4 +117,56 @@ void main() {
     await submit(tester, signUp: true);
     expect(requests, 1);
   });
+  testWidgets(
+    'after another account signed out, sign-up starts empty and sign-in keeps the last email',
+    (tester) async {
+      // Sign-out clears the tokens but keeps the last email in storage.
+      final memory = MemoryStorage();
+      await memory.write(
+        key: SecureSessionStorage.key,
+        value: jsonEncode({'email': 'previa@example.test'}),
+      );
+      final session = facade(
+        memory,
+        MockClient((_) async => throw StateError('No request expected')),
+      );
+      await session.restore();
+      expect((session.state as Unauthenticated).firstVisit, isFalse);
+      expect(session.email, 'previa@example.test');
+      final router = buildRouter(session);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+
+      String emailField() => tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.widgetWithText(TextFormField, 'Correo electrónico *'),
+              matching: find.byType(TextField),
+            ),
+          )
+          .controller!
+          .text;
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Crear cuenta'));
+      await tester.pumpAndSettle();
+      expect(find.text('Crear cuenta'), findsWidgets);
+      expect(emailField(), isEmpty);
+      expect(find.text('previa@example.test'), findsNothing);
+
+      router.go('/welcome');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Iniciar sesión'));
+      await tester.pumpAndSettle();
+      expect(emailField(), 'previa@example.test');
+
+      // Returning to registration still starts empty.
+      router.go('/welcome');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Crear cuenta'));
+      await tester.pumpAndSettle();
+      expect(emailField(), isEmpty);
+    },
+  );
 }
