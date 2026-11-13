@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../domain/profile.dart';
+import 'profile_photo.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({
@@ -59,6 +60,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            ProfilePhoto(
+              name: widget.profile.fullName,
+              imageUrl: widget.profile.imageUrl,
+            ),
             TextFormField(
               controller: _name,
               readOnly: _saving,
