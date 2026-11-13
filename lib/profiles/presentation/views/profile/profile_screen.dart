@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injections.dart';
 import '../../../../iam/presentation/session_cubit.dart';
 import '../../profile_cubit.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -55,6 +56,21 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(profile.fullName, textAlign: TextAlign.center),
                   Text(session.email, textAlign: TextAlign.center),
+                  TextButton(
+                    onPressed: () {
+                      final cubit = context.read<ProfileCubit>();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => EditProfileScreen(
+                            profile: profile,
+                            email: session.email,
+                            onSave: cubit.update,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Editar perfil'),
+                  ),
                   if (profile.phoneNumber != null)
                     Text(profile.phoneNumber!, textAlign: TextAlign.center),
                 ],
