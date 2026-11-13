@@ -3,6 +3,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:rumbo_mobile_application/profiles/infrastructure/profile_repository.dart';
+import 'package:rumbo_mobile_application/profiles/presentation/profile_cubit.dart';
+import 'package:rumbo_mobile_application/shared/infrastructure/config/api_configuration.dart';
 import 'package:rumbo_mobile_application/injections.dart';
 import 'package:rumbo_mobile_application/profiles/domain/photo_picker.dart';
 import 'package:rumbo_mobile_application/profiles/presentation/views/profile/profile_photo.dart';
@@ -53,9 +59,30 @@ void main() {
       final picker = FakePhotoPicker();
       serviceLocator.registerSingleton<PhotoPicker>(picker);
       addTearDown(() => serviceLocator.reset());
+      final cubit = ProfileCubit(
+        ProfileRepository(
+          MockClient((request) async {
+            return http.Response(
+              jsonEncode({
+                'fullName': 'Ana Torres',
+                'imageUrl': request.method == 'PUT'
+                    ? 'https://example.test/new.png'
+                    : null,
+              }),
+              200,
+            );
+          }),
+          ApiConfiguration(baseUrl: Uri.parse('https://example.test')),
+        ),
+      );
+      await cubit.load();
+      addTearDown(cubit.close);
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: ProfilePhoto(name: 'Ana Torres')),
+        BlocProvider.value(
+          value: cubit,
+          child: const MaterialApp(
+            home: Scaffold(body: ProfilePhoto(name: 'Ana Torres')),
+          ),
         ),
       );
 
@@ -87,7 +114,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.widget<CircleAvatar>(find.byType(CircleAvatar)).foregroundImage,
-        isA<MemoryImage>(),
+        isA<NetworkImage>().having(
+          (image) => image.url,
+          'url',
+          'https://example.test/new.png',
+        ),
       );
       await choose('Quitar foto');
       expect(

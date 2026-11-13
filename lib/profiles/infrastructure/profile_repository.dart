@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../shared/infrastructure/config/api_configuration.dart';
 import '../domain/profile.dart';
+import '../domain/photo_picker.dart';
 import '../domain/route_preferences.dart';
 
 class ProfileRepository {
@@ -10,6 +11,44 @@ class ProfileRepository {
 
   final http.Client client;
   final ApiConfiguration configuration;
+
+  Future<Profile> uploadImage(PickedPhoto photo) async {
+    final error = photo.validationError;
+    if (error != null) throw ProfileImageFailure(error);
+    final request =
+        http.MultipartRequest(
+            'PUT',
+            configuration.baseUrl.resolve('/api/v1/profiles/me/image'),
+          )
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              'image',
+              photo.bytes,
+              filename: photo.name,
+              contentType: http.MediaType.parse(photo.mimeType!),
+            ),
+          );
+    return _imageResponse(
+      await http.Response.fromStream(await client.send(request)),
+    );
+  }
+
+  Future<Profile> deleteImage() async => _imageResponse(
+    await client.delete(
+      configuration.baseUrl.resolve('/api/v1/profiles/me/image'),
+    ),
+  );
+
+  Profile _imageResponse(http.Response response) {
+    if (response.statusCode == 200) return _parse(response);
+    throw ProfileImageFailure(switch (response.statusCode) {
+      413 => 'La foto debe pesar como máximo 5 MiB.',
+      400 => 'La foto no es válida. Selecciona una foto JPEG o PNG.',
+      502 || 503 =>
+        'El almacenamiento de fotos no está disponible. Inténtalo de nuevo.',
+      _ => 'No se pudo actualizar la foto. Inténtalo de nuevo.',
+    });
+  }
 
   Future<Profile?> load() async {
     final response = await client.get(
@@ -66,4 +105,9 @@ class ProfileRepository {
       imageUrl: data['imageUrl'] as String?,
     );
   }
+}
+
+class ProfileImageFailure implements Exception {
+  const ProfileImageFailure(this.message);
+  final String message;
 }

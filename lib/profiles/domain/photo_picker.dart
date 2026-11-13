@@ -12,20 +12,26 @@ class PickedPhoto {
   final String name;
   final Uint8List bytes;
 
+  String? get mimeType {
+    if (bytes.length >= 3 &&
+        bytes[0] == 255 &&
+        bytes[1] == 216 &&
+        bytes[2] == 255) {
+      return 'image/jpeg';
+    }
+    const png = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (bytes.length >= 8 &&
+        List.generate(8, (i) => bytes[i] == png[i]).every((v) => v)) {
+      return 'image/png';
+    }
+    return null;
+  }
+
   String? get validationError {
     if (bytes.length > 5 * 1024 * 1024) {
       return 'La foto debe pesar como máximo 5 MiB.';
     }
-    final jpeg =
-        bytes.length >= 3 &&
-        bytes[0] == 0xff &&
-        bytes[1] == 0xd8 &&
-        bytes[2] == 0xff;
-    const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-    final png =
-        bytes.length >= 8 &&
-        List.generate(8, (i) => bytes[i] == pngSignature[i]).every((v) => v);
-    if (bytes.isEmpty || (!jpeg && !png)) {
+    if (mimeType == null) {
       return 'Selecciona una foto JPEG o PNG.';
     }
     return null;

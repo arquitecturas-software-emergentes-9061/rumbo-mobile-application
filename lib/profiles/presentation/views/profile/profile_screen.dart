@@ -48,10 +48,13 @@ class ProfileScreen extends StatelessWidget {
                       final cubit = context.read<ProfileCubit>();
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => EditProfileScreen(
-                            profile: profile,
-                            email: session.email,
-                            onSave: cubit.update,
+                          builder: (_) => BlocProvider.value(
+                            value: cubit,
+                            child: EditProfileScreen(
+                              profile: profile,
+                              email: session.email,
+                              onSave: cubit.update,
+                            ),
                           ),
                         ),
                       );

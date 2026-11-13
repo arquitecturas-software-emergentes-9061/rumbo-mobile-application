@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../injections.dart';
 import '../../../domain/photo_picker.dart';
+import '../../profile_cubit.dart';
 
-/// A local photo draft. Uploading and deleting server images belong to PR-61.
 class ProfilePhoto extends StatefulWidget {
   const ProfilePhoto({required this.name, this.imageUrl, super.key});
 
@@ -15,13 +16,14 @@ class ProfilePhoto extends StatefulWidget {
 }
 
 class _ProfilePhotoState extends State<ProfilePhoto> {
-  PickedPhoto? _draft;
-  bool _removed = false;
   bool _busy = false;
 
   Future<void> _change() async {
     setState(() => _busy = true);
     try {
+      final state = context.read<ProfileCubit>().state;
+      final hasImage =
+          state is ProfileLoaded && state.profile?.imageUrl != null;
       final choice = await showModalBottomSheet<String>(
         context: context,
         builder: (context) => SafeArea(
@@ -31,8 +33,7 @@ class _ProfilePhotoState extends State<ProfilePhoto> {
               for (final option in [
                 'Galería',
                 'Cámara',
-                if (_draft != null || (!_removed && widget.imageUrl != null))
-                  'Quitar foto',
+                if (hasImage) 'Quitar foto',
               ])
                 ListTile(
                   title: Text(option),
@@ -44,10 +45,7 @@ class _ProfilePhotoState extends State<ProfilePhoto> {
       );
       if (!mounted || choice == null) return;
       if (choice == 'Quitar foto') {
-        setState(() {
-          _draft = null;
-          _removed = true;
-        });
+        await context.read<ProfileCubit>().deleteImage();
         return;
       }
       final photo = await serviceLocator<PhotoPicker>().pick(
@@ -81,10 +79,7 @@ class _ProfilePhotoState extends State<ProfilePhoto> {
         ),
       );
       if (mounted && confirmed == true) {
-        setState(() {
-          _draft = photo;
-          _removed = false;
-        });
+        await context.read<ProfileCubit>().uploadImage(photo);
       }
     } catch (error) {
       if (mounted) {
@@ -112,22 +107,27 @@ class _ProfilePhotoState extends State<ProfilePhoto> {
         .take(2)
         .map((part) => String.fromCharCode(part.runes.first).toUpperCase())
         .join();
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 32,
-          foregroundImage: _draft != null
-              ? MemoryImage(_draft!.bytes)
-              : (!_removed && widget.imageUrl != null
-                    ? NetworkImage(widget.imageUrl!)
-                    : null),
-          child: Text(initials),
-        ),
-        TextButton(
-          onPressed: _busy ? null : _change,
-          child: const Text('Cambiar foto'),
-        ),
-      ],
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        final loaded = state is ProfileLoaded ? state : null;
+        final imageUrl = loaded?.profile?.imageUrl;
+        return Column(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+              onForegroundImageError: imageUrl != null ? (_, _) {} : null,
+              child: Text(initials),
+            ),
+            TextButton(
+              onPressed: _busy || (loaded?.imageBusy ?? false) ? null : _change,
+              child: const Text('Cambiar foto'),
+            ),
+            if (loaded?.imageBusy ?? false) const CircularProgressIndicator(),
+            if (loaded?.imageError != null) Text(loaded!.imageError!),
+          ],
+        );
+      },
     );
   }
 }
