@@ -1,34 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../injections.dart';
 import '../../../../iam/presentation/session_cubit.dart';
+import '../../profile_cubit.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Perfil y preferencias')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(Icons.person_outline, size: 64),
-            const Text(
-              'Aquí se incorporarán los datos y las preferencias de guiado del visitante.',
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () async {
-                try {
-                  await context.read<SessionCubit>().facade.signOut();
-                } catch (_) {
-                  /* Local sign-out completes even when the API is offline. */
-                }
-              },
-              child: const Text('Cerrar sesión'),
-            ),
-          ],
+    return BlocProvider(
+      create: (_) => ProfileCubit(serviceLocator())..load(),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Perfil y preferencias')),
+        body: BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            final session = context.read<SessionCubit>().facade;
+            final profile = state is ProfileLoaded ? state.profile : null;
+            final initials = profile?.fullName
+                .trim()
+                .split(RegExp(r'\s+'))
+                .where((name) => name.isNotEmpty)
+                .take(2)
+                .map(
+                  (name) => String.fromCharCode(name.runes.first).toUpperCase(),
+                )
+                .join();
+            final imageUrl = profile?.imageUrl;
+            return ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                if (state is ProfileLoading)
+                  const Center(child: CircularProgressIndicator()),
+                if (state is ProfileLoadFailed) ...[
+                  const Text('No se pudo cargar el perfil.'),
+                  TextButton(
+                    onPressed: context.read<ProfileCubit>().load,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+                if (state is ProfileLoaded && profile == null)
+                  const Text('No encontramos tu perfil.'),
+                if (profile != null) ...[
+                  Center(
+                    child: CircleAvatar(
+                      radius: 32,
+                      foregroundImage: imageUrl == null
+                          ? null
+                          : NetworkImage(imageUrl),
+                      child: Text(initials ?? ''),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(profile.fullName, textAlign: TextAlign.center),
+                  Text(session.email, textAlign: TextAlign.center),
+                  if (profile.phoneNumber != null)
+                    Text(profile.phoneNumber!, textAlign: TextAlign.center),
+                ],
+                const SizedBox(height: 24),
+                OutlinedButton(
+                  onPressed: () async {
+                    try {
+                      await session.signOut();
+                    } catch (_) {
+                      // Local sign-out completes even when the API is offline.
+                    }
+                  },
+                  child: const Text('Cerrar sesión'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
