@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../shared/infrastructure/config/api_configuration.dart';
 import '../domain/profile.dart';
+import '../domain/profile_validation_failure.dart';
 import '../domain/photo_picker.dart';
 import '../domain/route_preferences.dart';
 
@@ -67,6 +68,30 @@ class ProfileRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'fullName': fullName, 'phoneNumber': phoneNumber}),
     );
+    if (response.statusCode == 400) {
+      try {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data is Map && data['code'] == 'VALIDATION_FAILED') {
+          final errors = data['errors'];
+          if (errors is Map) {
+            // API messages come from Bean Validation defaults and are not
+            // localized, so each rejected field gets a Spanish message here.
+            final name = errors.containsKey('fullName');
+            final phone = errors.containsKey('phoneNumber');
+            if (name || phone) {
+              throw ProfileValidationFailure(
+                fullName: name ? 'Revisa tu nombre completo.' : null,
+                phoneNumber: phone
+                    ? 'Revisa el teléfono: usa el código de país y solo dígitos.'
+                    : null,
+              );
+            }
+          }
+        }
+      } on FormatException {
+        // An unusable error body keeps the generic failure behavior.
+      }
+    }
     if (response.statusCode != 200) {
       throw StateError('No se pudo guardar el perfil');
     }

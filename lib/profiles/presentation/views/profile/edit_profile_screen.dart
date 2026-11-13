@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../domain/profile.dart';
+import '../../../domain/profile_validation_failure.dart';
 import 'profile_photo.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -24,6 +25,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final _phone = TextEditingController(text: widget.profile.phoneNumber);
   bool _saving = false;
   String? _error;
+  String? _nameError;
+  String? _phoneError;
 
   @override
   void dispose() {
@@ -33,7 +36,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    if (_saving || !_form.currentState!.validate()) return;
+    if (_saving) return;
+    setState(() {
+      _nameError = null;
+      _phoneError = null;
+    });
+    if (!_form.currentState!.validate()) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -42,11 +50,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final phone = _phone.text.trim();
       await widget.onSave(_name.text.trim(), phone.isEmpty ? null : phone);
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'No se pudieron guardar los cambios. Inténtalo de nuevo.';
+        if (error is ProfileValidationFailure) {
+          _nameError = error.fullName;
+          _phoneError = error.phoneNumber;
+        } else {
+          _error = 'No se pudieron guardar los cambios. Inténtalo de nuevo.';
+        }
       });
     }
   }
@@ -67,7 +80,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             TextFormField(
               controller: _name,
               readOnly: _saving,
-              decoration: const InputDecoration(labelText: 'Nombre completo *'),
+              onChanged: (_) => setState(() => _nameError = null),
+              decoration: InputDecoration(
+                labelText: 'Nombre completo *',
+                errorText: _nameError,
+              ),
               validator: (input) {
                 final value = input?.trim() ?? '';
                 if (value.isEmpty) return 'Ingresa tu nombre completo.';
@@ -81,8 +98,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               controller: _phone,
               readOnly: _saving,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
+              onChanged: (_) => setState(() => _phoneError = null),
+              decoration: InputDecoration(
                 labelText: 'Teléfono',
+                errorText: _phoneError,
                 helperText: 'Número móvil con código de país',
               ),
               validator: (input) {
