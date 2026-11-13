@@ -1,4 +1,6 @@
 import 'package:go_router/go_router.dart';
+import 'package:rumbo_mobile_application/navigation/domain/entities/destination.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/destination/destination_detail_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/route/route_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/search/search_screen.dart';
@@ -22,6 +24,16 @@ GoRouter buildRouter() => GoRouter(
             GoRoute(
               path: '/search',
               builder: (context, state) => const SearchScreen(),
+              routes: [
+                GoRoute(
+                  path: 'destination/:id',
+                  builder: (context, state) => DestinationDetailScreen(
+                    destination: state.extra is Destination
+                        ? state.extra as Destination
+                        : null,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
