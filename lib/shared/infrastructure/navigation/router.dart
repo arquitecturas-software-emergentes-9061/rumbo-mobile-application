@@ -1,22 +1,71 @@
 import 'package:go_router/go_router.dart';
 import 'package:rumbo_mobile_application/navigation/domain/entities/destination.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/destination/destination_detail_screen.dart';
+import 'package:flutter/widgets.dart';
+import '../../../iam/application/session_facade.dart';
+import '../../../iam/presentation/auth_screens.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/route/route_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/search/search_screen.dart';
 import 'package:rumbo_mobile_application/profiles/presentation/views/profile/profile_screen.dart';
 import 'package:rumbo_mobile_application/shared/presentation/widgets/rumbo_shell.dart';
 
-GoRouter buildRouter() => GoRouter(
-  initialLocation: '/home',
+GoRouter buildRouter(SessionFacade session) => GoRouter(
+  initialLocation: '/session',
+  refreshListenable: session,
+  redirect: (context, route) {
+    final state = session.state;
+    final path = route.uri.path;
+    if (state is SessionLoading || state is RetryableError) {
+      return path == '/session' ? null : '/session';
+    }
+    if (state is SessionExpired) {
+      return path == '/sign-in' ? null : '/sign-in';
+    }
+    if (state is Unauthenticated) {
+      return ['/welcome', '/sign-in', '/sign-up'].contains(path)
+          ? null
+          : '/welcome';
+    }
+    if (state is Authenticated) {
+      if (!state.profileConfigured) {
+        return path == '/profile' ? null : '/profile';
+      }
+      if (['/session', '/welcome', '/sign-in', '/sign-up'].contains(path)) {
+        return '/home';
+      }
+    }
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/session',
+      builder: (_, _) => SessionGateScreen(session: session),
+    ),
+    GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+    GoRoute(
+      path: '/sign-in',
+      builder: (_, _) =>
+          AuthScreen(key: const ValueKey('sign-in'), session: session),
+    ),
+    GoRoute(
+      path: '/sign-up',
+      builder: (_, _) => AuthScreen(
+        key: const ValueKey('sign-up'),
+        session: session,
+        signUp: true,
+      ),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           RumboShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const HomeScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -39,7 +88,10 @@ GoRouter buildRouter() => GoRouter(
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/route', builder: (context, state) => const RouteScreen()),
+            GoRoute(
+              path: '/route',
+              builder: (context, state) => const RouteScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
