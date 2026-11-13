@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../shared/infrastructure/config/api_configuration.dart';
 import '../domain/profile.dart';
+import '../domain/route_preferences.dart';
 
 class ProfileRepository {
   ProfileRepository(this.client, this.configuration);
@@ -31,6 +32,29 @@ class ProfileRepository {
       throw StateError('No se pudo guardar el perfil');
     }
     return _parse(response);
+  }
+
+  Future<RoutePreferences> preferences() => _preferences();
+  Future<RoutePreferences> savePreferences(RoutePreferences value) =>
+      _preferences(value);
+
+  Future<RoutePreferences> _preferences([RoutePreferences? value]) async {
+    final uri = configuration.baseUrl.resolve(
+      '/api/v1/profiles/me/preferences',
+    );
+    final response = await (value == null
+        ? client.get(uri)
+        : client.put(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(value.toJson()),
+          ));
+    if (response.statusCode != 200) {
+      throw StateError('No se pudieron actualizar las preferencias');
+    }
+    return RoutePreferences.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
   }
 
   Profile _parse(http.Response response) {

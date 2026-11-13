@@ -5,6 +5,7 @@ import '../../../../injections.dart';
 import '../../../../iam/presentation/session_cubit.dart';
 import '../../profile_cubit.dart';
 import 'edit_profile_screen.dart';
+import 'profile_preferences_panel.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -74,6 +75,8 @@ class ProfileScreen extends StatelessWidget {
                   if (profile.phoneNumber != null)
                     Text(profile.phoneNumber!, textAlign: TextAlign.center),
                 ],
+                if (profile != null)
+                  ProfilePreferencesPanel(repository: serviceLocator()),
                 const SizedBox(height: 24),
                 OutlinedButton(
                   onPressed: () async {
