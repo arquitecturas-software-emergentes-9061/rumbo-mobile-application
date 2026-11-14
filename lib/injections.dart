@@ -22,6 +22,7 @@ import 'iam/infrastructure/auth_api.dart';
 import 'iam/infrastructure/secure_session_storage.dart';
 import 'iam/infrastructure/session_repository_impl.dart';
 import 'iam/presentation/session_cubit.dart';
+import 'profiles/infrastructure/profile_repository.dart';
 import 'package:rumbo_mobile_application/shared/infrastructure/config/api_configuration.dart';
 
 final serviceLocator = GetIt.instance;
@@ -82,6 +83,10 @@ Future<void> setupDependencies() async {
   );
   serviceLocator.registerLazySingleton<AuthorizedClient>(
     () => AuthorizedClient(serviceLocator(), serviceLocator()),
+  );
+  serviceLocator.registerLazySingleton<ProfileRepository>(
+    () =>
+        ProfileRepository(serviceLocator<AuthorizedClient>(), serviceLocator()),
   );
   serviceLocator.registerFactory<SessionCubit>(
     () => SessionCubit(serviceLocator()),
