@@ -18,6 +18,22 @@ class ProfileRepository {
     if (response.statusCode != 200) {
       throw StateError('No se pudo cargar el perfil');
     }
+    return _parse(response);
+  }
+
+  Future<Profile> update(String fullName, String? phoneNumber) async {
+    final response = await client.put(
+      configuration.baseUrl.resolve('/api/v1/profiles/me'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'fullName': fullName, 'phoneNumber': phoneNumber}),
+    );
+    if (response.statusCode != 200) {
+      throw StateError('No se pudo guardar el perfil');
+    }
+    return _parse(response);
+  }
+
+  Profile _parse(http.Response response) {
     final data =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     return Profile(

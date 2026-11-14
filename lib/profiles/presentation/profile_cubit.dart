@@ -23,6 +23,11 @@ class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit(this.repository) : super(const ProfileLoading());
   final ProfileRepository repository;
 
+  Future<void> update(String fullName, String? phoneNumber) async {
+    final profile = await repository.update(fullName, phoneNumber);
+    if (!isClosed) emit(ProfileLoaded(profile));
+  }
+
   Future<void> load() async {
     emit(const ProfileLoading());
     try {
