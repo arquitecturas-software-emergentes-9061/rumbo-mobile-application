@@ -27,11 +27,13 @@ Cada módulo sigue el estilo de Restock:
   presentation/      # pantallas, widgets y BLoC por flujo
 ```
 
-Las dependencias apuntan hacia el dominio. Los módulos se comunican mediante contratos de aplicación y valores explícitos, evitando importar modelos de transporte de otro contexto. `shared` contiene solo piezas transversales (tema, router, configuración de API y shell), sin reglas de negocio.
+El dominio no depende de Flutter ni de infraestructura. El contrato del repositorio vive en `domain/repositories`; la sesión de captura genérica contiene ubicación y condición, mientras que los filtros de escaneo Android viven en infraestructura. La implementación convierte los modelos del proveedor de plataforma a entidades del dominio. La fachada de aplicación coordina el repositorio y el servicio de permisos, y el BLoC transforma eventos en estado de presentación. Los módulos se comunican mediante valores explícitos, evitando importar modelos de transporte de otro contexto. `shared` contiene solo piezas transversales (tema, router, configuración de API y shell), sin reglas de negocio.
 
 ## Estado de esta entrega
 
-El arranque incorpora IAM: `SessionFacade`, `SessionCubit`, repositorio, API HTTP y almacenamiento seguro inyectado. El router protege el shell y ofrece Bienvenida, Iniciar sesión, Crear cuenta y recuperación con Reintentar. El resto de contextos conserva sus pantallas de marcador de posición, con una acción mínima de cierre de sesión en Perfil.
+La base contiene tema, router, configuración de API y composición de dependencias. Navigation incorpora captura BLE de diagnóstico con escaneo Android y exportación CSV, más el análisis RSSI en Dart puro. La captura iOS sigue pendiente. Véanse [Captura de RSSI de referencia](ble_reference_capture.md) y [Fase 2 multiplataforma](multiplatform_ble_phase2.md). La búsqueda de destinos incorpora fachada, repositorio y fuentes remota y de muestra; Perfil incorpora preferencias de ruta.
+
+El arranque incorpora IAM: `SessionFacade`, `SessionCubit`, repositorio, API HTTP y almacenamiento seguro inyectado. El router protege el shell y ofrece Bienvenida, Iniciar sesión, Crear cuenta y recuperación con Reintentar. La pantalla de diagnóstico BLE solo se registra en Android debug. Perfil ofrece cierre de sesión.
 
 ### Regla de primera visita (PR-51)
 

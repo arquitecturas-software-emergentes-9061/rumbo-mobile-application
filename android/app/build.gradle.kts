@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -15,7 +16,7 @@ android {
 
     defaultConfig {
         applicationId = "com.uitopic.rumbo"
-        minSdk = flutter.minSdkVersion
+        minSdk = if (project.findProject(":unityLibrary") != null) maxOf(flutter.minSdkVersion, 25) else flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -35,5 +36,12 @@ flutter {
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+    if (project.findProject(":unityLibrary") != null) {
+        implementation(project(":unityLibrary"))
     }
 }

@@ -1,7 +1,12 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rumbo_mobile_application/injections.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/ble_diagnostics_screen.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/bloc/ble_diagnostics_bloc.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/bloc/ble_diagnostics_event.dart';
 import 'package:rumbo_mobile_application/navigation/domain/entities/destination.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/destination/destination_detail_screen.dart';
-import 'package:flutter/widgets.dart';
 import '../../../iam/application/session_facade.dart';
 import '../../../iam/presentation/auth_screens.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
@@ -38,6 +43,18 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
     return null;
   },
   routes: [
+    if (kDebugMode &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android)
+      GoRoute(
+        path: '/developer/ble',
+        builder: (context, state) => BlocProvider<BleDiagnosticsBloc>(
+          create: (_) =>
+              serviceLocator<BleDiagnosticsBloc>()
+                ..add(const BleDiagnosticsStarted()),
+          child: const BleDiagnosticsScreen(),
+        ),
+      ),
     GoRoute(
       path: '/session',
       builder: (_, _) => SessionGateScreen(session: session),

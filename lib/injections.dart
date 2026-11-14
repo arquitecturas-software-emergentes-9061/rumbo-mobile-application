@@ -1,12 +1,20 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:rumbo_mobile_application/navigation/application/ble_diagnostics_facade_service.dart';
+import 'package:rumbo_mobile_application/navigation/domain/repositories/ble_diagnostics_repository.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/ble_platform_data_provider.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/models/android_ble_session_configuration.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/permissions/android_ble_permission_service.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/permissions/ble_permission_service.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/repositories/ble_diagnostics_repository_impl.dart';
+import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagnostics/bloc/ble_diagnostics_bloc.dart';
 import 'package:rumbo_mobile_application/navigation/application/destination_search_facade_service.dart';
 import 'package:rumbo_mobile_application/navigation/domain/repositories/destination_repository.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_remote_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_sample_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/repositories/destination_repository_impl.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'iam/application/session_facade.dart';
 import 'iam/application/authorized_client.dart';
 import 'iam/domain/session_repository.dart';
@@ -24,6 +32,40 @@ Future<void> setupDependencies() async {
     () => ApiConfiguration.fromEnvironment(),
   );
   serviceLocator.registerLazySingleton<http.Client>(() => http.Client());
+  serviceLocator.registerLazySingleton<BlePlatformDataProvider>(
+    () => const BlePlatformDataProvider(),
+  );
+  serviceLocator.registerLazySingleton<
+    BleDiagnosticsRepository<AndroidBleSessionConfiguration>
+  >(
+    () => BleDiagnosticsRepositoryImpl(
+      blePlatformDataProvider: serviceLocator<BlePlatformDataProvider>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<BlePermissionService>(
+    () => AndroidBlePermissionService(
+      blePlatformDataProvider: serviceLocator<BlePlatformDataProvider>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<
+    BleDiagnosticsFacadeService<AndroidBleSessionConfiguration>
+  >(
+    () => BleDiagnosticsFacadeService(
+      bleDiagnosticsRepository:
+          serviceLocator<
+            BleDiagnosticsRepository<AndroidBleSessionConfiguration>
+          >(),
+      blePermissionService: serviceLocator<BlePermissionService>(),
+    ),
+  );
+  serviceLocator.registerFactory<BleDiagnosticsBloc>(
+    () => BleDiagnosticsBloc(
+      bleDiagnosticsFacadeService:
+          serviceLocator<
+            BleDiagnosticsFacadeService<AndroidBleSessionConfiguration>
+          >(),
+    ),
+  );
   serviceLocator.registerLazySingleton<FlutterSecureStorage>(
     () => const FlutterSecureStorage(),
   );

@@ -24,3 +24,15 @@ plugins {
 }
 
 include(":app")
+
+val unityLibraryDirectory = file("../../rumbo-ar-unity/Builds/Android/unityLibrary")
+if (unityLibraryDirectory.isDirectory) {
+    include(":unityLibrary")
+    project(":unityLibrary").projectDir = unityLibraryDirectory
+    unityLibraryDirectory.listFiles()?.filter { child ->
+        child.isDirectory && (File(child, "build.gradle").isFile || File(child, "build.gradle.kts").isFile)
+    }?.forEach { child ->
+        include(":unityLibrary:${child.name}")
+        project(":unityLibrary:${child.name}").projectDir = child
+    }
+}
