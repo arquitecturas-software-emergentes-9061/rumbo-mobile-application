@@ -11,6 +11,42 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AR_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openDemo" -> {
+                    val heading = (call.argument<Number>("headingDegrees")?.toFloat() ?: 0f)
+                    if (!heading.isFinite() || heading < 0f || heading >= 360f) {
+                        result.error("INVALID_DIRECTION", "Dirección de prueba inválida.", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val unityActivity = listOf(
+                            "com.unity3d.player.UnityPlayerActivity",
+                            "com.unity3d.player.UnityPlayerGameActivity",
+                        ).firstNotNullOfOrNull { name ->
+                            try { Class.forName(name) } catch (_: ClassNotFoundException) { null }
+                        } ?: throw ClassNotFoundException("Unity activity not found")
+                        startActivityForResult(Intent(this, unityActivity).apply {
+                            putExtra("rumbo_demo_heading", heading)
+                        }, AR_REQUEST)
+                        result.success(null)
+                    } catch (_: ClassNotFoundException) {
+                        result.error("UNITY_NOT_LINKED", "Unity aún no está exportado e integrado en esta compilación.", null)
+                    } catch (error: Exception) {
+                        result.error("AR_START_FAILED", error.message ?: "No se pudo abrir AR.", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "$AR_CHANNEL/events")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    RumboArBridge.attach(events)
+                }
+                override fun onCancel(arguments: Any?) { RumboArBridge.attach(null) }
+            })
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "androidSdkVersion" -> result.success(Build.VERSION.SDK_INT)
@@ -71,7 +107,16 @@ class MainActivity : FlutterActivity() {
             })
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == AR_REQUEST) {
+            RumboArBridge.reportStatus("closed", "returned_to_flutter", java.time.Instant.now().toString())
+        }
+    }
+
     companion object {
         private const val CHANNEL = "com.uitopic.rumbo/ble_scan"
+        private const val AR_CHANNEL = "com.uitopic.rumbo/ar"
+        private const val AR_REQUEST = 6103
     }
 }

@@ -18,7 +18,7 @@ class HomeScreen extends StatelessWidget {
             icon: Icons.navigation_outlined,
           ),
         ),
-        if (kDebugMode && defaultTargetPlatform == TargetPlatform.android)
+        if (kDebugMode && !kIsWeb && defaultTargetPlatform == TargetPlatform.android)
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextButton.icon(

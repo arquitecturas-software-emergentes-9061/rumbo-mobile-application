@@ -14,7 +14,7 @@ import 'package:rumbo_mobile_application/shared/presentation/widgets/rumbo_shell
 GoRouter buildRouter() => GoRouter(
   initialLocation: '/home',
   routes: [
-    if (kDebugMode && defaultTargetPlatform == TargetPlatform.android)
+    if (kDebugMode && !kIsWeb && defaultTargetPlatform == TargetPlatform.android)
       GoRoute(
         path: '/developer/ble',
         builder: (context, state) => BlocProvider<BleDiagnosticsBloc>(

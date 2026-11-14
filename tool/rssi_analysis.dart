@@ -7,6 +7,21 @@ import 'package:rumbo_mobile_application/navigation/infrastructure/models/rssi_m
 /// Developer tool. It reports signal statistics, never calibrated accuracy.
 void main(List<String> args) {
   const codec = RssiMeasurementCsvModel();
+  if (args.length == 4 && args.first == 'select-run') {
+    try {
+      final output = File(args[2]);
+      if (output.existsSync()) throw const FormatException('El archivo de salida ya existe.');
+      final selected = codec.decode(File(args[1]).readAsStringSync())
+          .where((sample) => sample.runId == args[3]).toList();
+      if (selected.isEmpty) throw const FormatException('No hay muestras para esa sesión.');
+      output.writeAsStringSync(codec.encode(selected));
+      stdout.writeln('Muestras de ${args[3]}: ${selected.length}.');
+    } on FormatException catch (error) {
+      stderr.writeln(error.message);
+      exitCode = 2;
+    }
+    return;
+  }
   if (args.length == 5 && args.first == 'normalize-android') {
     final input = File(args[1]);
     final output = File(args[2]);
@@ -78,6 +93,7 @@ void main(List<String> args) {
   stderr.writeln(
     'Uso:\n'
     '  dart run tool/rssi_analysis.dart normalize-android <fase1.csv> <comun.csv> <source_id> <run_id>\n'
+    '  dart run tool/rssi_analysis.dart select-run <comun.csv> <sesion.csv> <run_id>\n'
     '  dart run tool/rssi_analysis.dart compare <calibracion.csv> <prueba.csv>',
   );
   exitCode = 2;
