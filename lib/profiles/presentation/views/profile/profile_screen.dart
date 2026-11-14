@@ -5,6 +5,8 @@ import '../../../../injections.dart';
 import '../../../../iam/presentation/session_cubit.dart';
 import '../../profile_cubit.dart';
 import 'edit_profile_screen.dart';
+import 'profile_preferences_panel.dart';
+import 'profile_photo.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -19,16 +21,6 @@ class ProfileScreen extends StatelessWidget {
           builder: (context, state) {
             final session = context.read<SessionCubit>().facade;
             final profile = state is ProfileLoaded ? state.profile : null;
-            final initials = profile?.fullName
-                .trim()
-                .split(RegExp(r'\s+'))
-                .where((name) => name.isNotEmpty)
-                .take(2)
-                .map(
-                  (name) => String.fromCharCode(name.runes.first).toUpperCase(),
-                )
-                .join();
-            final imageUrl = profile?.imageUrl;
             return ListView(
               padding: const EdgeInsets.all(24),
               children: [
@@ -44,14 +36,9 @@ class ProfileScreen extends StatelessWidget {
                 if (state is ProfileLoaded && profile == null)
                   const Text('No encontramos tu perfil.'),
                 if (profile != null) ...[
-                  Center(
-                    child: CircleAvatar(
-                      radius: 32,
-                      foregroundImage: imageUrl == null
-                          ? null
-                          : NetworkImage(imageUrl),
-                      child: Text(initials ?? ''),
-                    ),
+                  ProfilePhoto(
+                    name: profile.fullName,
+                    imageUrl: profile.imageUrl,
                   ),
                   const SizedBox(height: 16),
                   Text(profile.fullName, textAlign: TextAlign.center),
@@ -61,10 +48,13 @@ class ProfileScreen extends StatelessWidget {
                       final cubit = context.read<ProfileCubit>();
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => EditProfileScreen(
-                            profile: profile,
-                            email: session.email,
-                            onSave: cubit.update,
+                          builder: (_) => BlocProvider.value(
+                            value: cubit,
+                            child: EditProfileScreen(
+                              profile: profile,
+                              email: session.email,
+                              onSave: cubit.update,
+                            ),
                           ),
                         ),
                       );
@@ -74,6 +64,8 @@ class ProfileScreen extends StatelessWidget {
                   if (profile.phoneNumber != null)
                     Text(profile.phoneNumber!, textAlign: TextAlign.center),
                 ],
+                if (profile != null)
+                  ProfilePreferencesPanel(repository: serviceLocator()),
                 const SizedBox(height: 24),
                 OutlinedButton(
                   onPressed: () async {
