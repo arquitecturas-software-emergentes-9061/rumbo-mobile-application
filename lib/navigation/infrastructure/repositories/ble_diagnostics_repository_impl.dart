@@ -29,6 +29,9 @@ class BleDiagnosticsRepositoryImpl
   Future<void> stop() => blePlatformDataProvider.stop();
 
   @override
+  Future<bool> exportCsv() => blePlatformDataProvider.exportCsv();
+
+  @override
   Future<BleScanSnapshot> snapshot() async {
     final model = await blePlatformDataProvider.snapshot();
     return model.toDomain();

@@ -17,6 +17,7 @@ class BleDiagnosticsBloc
     on<BleDiscoveryRequested>(_onDiscoveryRequested);
     on<BleCaptureRequested>(_onCaptureRequested);
     on<BleScanStopRequested>(_onStopRequested);
+    on<BleCsvExportRequested>(_onCsvExportRequested);
     on<BleSettingsRequested>(_onSettingsRequested);
     on<BlePlatformEventReceived>(_onPlatformEvent);
     on<BlePlatformErrorReceived>(_onPlatformError);
@@ -166,6 +167,27 @@ class BleDiagnosticsBloc
   ) async {
     try {
       await bleDiagnosticsFacadeService.openSettings();
+    } catch (error) {
+      if (!emit.isDone) _showError(error, emit);
+    }
+  }
+
+  Future<void> _onCsvExportRequested(
+    BleCsvExportRequested event,
+    Emitter<BleDiagnosticsState> emit,
+  ) async {
+    if (state.busy || state.isActive) return;
+    emit(state.copyWith(busy: true));
+    try {
+      final saved = await bleDiagnosticsFacadeService.exportCsv();
+      if (!emit.isDone) {
+        emit(
+          state.copyWith(
+            busy: false,
+            message: saved ? 'CSV exportado.' : 'Exportación cancelada.',
+          ),
+        );
+      }
     } catch (error) {
       if (!emit.isDone) _showError(error, emit);
     }

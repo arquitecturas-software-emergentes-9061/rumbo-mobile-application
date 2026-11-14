@@ -19,10 +19,23 @@ class ArPlatformBridge {
 
   Future<void> openDemo(double headingDegrees) async {
     if (!isSupportedPlatform) {
-      throw PlatformException(code: 'UNSUPPORTED', message: 'El prototipo AR requiere Android.');
+      throw PlatformException(
+        code: 'UNSUPPORTED',
+        message: 'El prototipo AR requiere Android.',
+      );
     }
     await _methods.invokeMethod<void>('openDemo', {
       'headingDegrees': headingDegrees,
     });
+  }
+
+  Future<bool> exportTrackingCsv() async {
+    if (!isSupportedPlatform) {
+      throw PlatformException(
+        code: 'UNSUPPORTED',
+        message: 'La exportación AR requiere Android.',
+      );
+    }
+    return await _methods.invokeMethod<bool>('exportTrackingCsv') ?? false;
   }
 }

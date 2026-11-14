@@ -10,4 +10,6 @@ class ArPrototypeFacade {
 
   Future<void> open(ArDemoInstruction instruction) =>
       bridge.openDemo(instruction.headingDegrees);
+
+  Future<bool> exportTrackingCsv() => bridge.exportTrackingCsv();
 }

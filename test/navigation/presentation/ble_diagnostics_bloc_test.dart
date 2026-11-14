@@ -17,6 +17,7 @@ class FakeBleDiagnosticsRepository
   int discoverCalls = 0;
   int captureCalls = 0;
   int stopCalls = 0;
+  int exportCalls = 0;
 
   @override
   Stream<BleScanEvent> get events => controller.stream;
@@ -33,6 +34,12 @@ class FakeBleDiagnosticsRepository
 
   @override
   Future<void> stop() async => stopCalls++;
+
+  @override
+  Future<bool> exportCsv() async {
+    exportCalls++;
+    return true;
+  }
 
   @override
   Future<BleScanSnapshot> snapshot() async => const BleScanSnapshot(
@@ -129,5 +136,26 @@ void main() {
   test('closing diagnostics does not stop the native capture', () async {
     await bloc.close();
     expect(repository.stopCalls, 0);
+  });
+
+  test('exports the CSV only after capture is inactive', () async {
+    final active = bloc.stream.firstWhere(
+      (state) => state.status == 'scanning',
+    );
+    repository.controller.add(const BleScanStatusChanged('scanning', ''));
+    await active;
+    bloc.add(const BleCsvExportRequested());
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.exportCalls, 0);
+
+    final idle = bloc.stream.firstWhere((state) => state.status == 'idle');
+    repository.controller.add(const BleScanStatusChanged('idle', ''));
+    await idle;
+    final exported = bloc.stream.firstWhere(
+      (state) => state.message == 'CSV exportado.',
+    );
+    bloc.add(const BleCsvExportRequested());
+    await exported;
+    expect(repository.exportCalls, 1);
   });
 }

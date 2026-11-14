@@ -27,6 +27,10 @@ class BleScanStopRequested extends BleDiagnosticsEvent {
   const BleScanStopRequested();
 }
 
+class BleCsvExportRequested extends BleDiagnosticsEvent {
+  const BleCsvExportRequested();
+}
+
 class BleSettingsRequested extends BleDiagnosticsEvent {
   const BleSettingsRequested();
 }

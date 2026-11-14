@@ -30,6 +30,8 @@ class BleDiagnosticsFacadeService<T extends BleCaptureSession> {
 
   Future<void> stop() => bleDiagnosticsRepository.stop();
 
+  Future<bool> exportCsv() => bleDiagnosticsRepository.exportCsv();
+
   Future<BleScanSnapshot> snapshot() => bleDiagnosticsRepository.snapshot();
 
   Future<void> openSettings() => blePermissionService.openSettings();

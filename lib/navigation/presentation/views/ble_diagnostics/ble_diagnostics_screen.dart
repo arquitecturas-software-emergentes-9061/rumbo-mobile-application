@@ -148,6 +148,17 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
                 Text('Mediciones guardadas: ${state.savedCount}'),
                 if (state.filePath.isNotEmpty)
                   SelectableText('CSV privado: ${state.filePath}'),
+                if (state.savedCount > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: state.busy || state.isActive
+                          ? null
+                          : () => bloc.add(const BleCsvExportRequested()),
+                      icon: const Icon(Icons.save_alt),
+                      label: const Text('Exportar CSV RSSI'),
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 Text(
                   'Balizas detectadas (${state.observations.length})',

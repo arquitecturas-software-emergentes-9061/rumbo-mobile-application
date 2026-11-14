@@ -21,6 +21,9 @@ class BlePlatformDataProvider {
 
   Future<void> stop() => _methods.invokeMethod<void>('stop');
 
+  Future<bool> exportCsv() async =>
+      await _methods.invokeMethod<bool>('exportCsv') ?? false;
+
   Future<int> androidSdkVersion() async {
     return await _methods.invokeMethod<int>('androidSdkVersion') ?? 0;
   }

@@ -38,7 +38,15 @@ flutter pub get
 flutter run --dart-define=RUMBO_API_BASE_URL=http://10.0.2.2:8080
 ```
 
-`10.0.2.2` es la dirección del host desde el emulador Android. Para un dispositivo físico, usar la dirección accesible del API. La URL se registra en la configuración, pero todavía no se hacen solicitudes.
+`10.0.2.2` es la dirección del host desde el emulador Android. Para un dispositivo físico, usar la dirección accesible del API. IAM ya hace solicitudes reales de inicio de sesión y recuperación de sesión.
+
+Para probar IAM desde Flutter Web con el backend local, inicia la API y usa un puerto Web fijo que esté permitido por CORS:
+
+```sh
+flutter run -d chrome --web-port=4200 --dart-define=RUMBO_API_BASE_URL=http://localhost:8080
+```
+
+Web utiliza `http://localhost:8080` por defecto si no se define la URL; Android emulador utiliza `http://10.0.2.2:8080`. El backend local permite por defecto el origen `http://localhost:4200`; si se usa otro host o puerto, hay que agregarlo a `CORS_ALLOWED_ORIGINS` del backend. El directorio remoto de destinos aún requiere alinear su endpoint y el identificador de sede con el contrato vigente de la API; para probar la interfaz sin esa integración, usa `--dart-define=RUMBO_USE_SAMPLE_DIRECTORY=true`.
 
 ## Próximos pasos
 
