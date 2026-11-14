@@ -31,4 +31,12 @@ Las dependencias apuntan hacia el dominio. Los módulos se comunican mediante co
 
 ## Estado de esta entrega
 
-Solo están creadas las piezas que tienen uso en el arranque: tema, router, configuración de API, composición de dependencias y pantallas de marcador de posición. No hay entidades ni repositorios inventados sin un caso de uso, y ninguna pantalla afirma resultados de BLE, rutas o datos reales.
+El arranque incorpora IAM: `SessionFacade`, `SessionCubit`, repositorio, API HTTP y almacenamiento seguro inyectado. El router protege el shell y ofrece Bienvenida, Iniciar sesión, Crear cuenta y recuperación con Reintentar. El resto de contextos conserva sus pantallas de marcador de posición, con una acción mínima de cierre de sesión en Perfil.
+
+### Regla de primera visita (PR-51)
+
+`SessionFacade.restore()` distingue la ausencia de sesión guardada (`Unauthenticated(firstVisit: true)`, Bienvenida) del rechazo del refresh por cualquier 4xx (`SessionExpired`, Iniciar sesión con aviso y correo precargado). Un refresh correcto consulta `profiles/me/preferences`: `configured: false` dirige a `/profile`; `configured: true`, a `/home`. Un error de red, 5xx o una respuesta de preferencias no utilizable ofrece Reintentar sin borrar la sesión.
+
+Solo se persisten refresh token, correo y userId en un registro seguro. El access token vive en memoria. Cada refresh rotado se guarda antes de consultar preferencias. Al expirar se retira el token y se conservan correo y userId; el cierre de sesión también retira los tokens y establece `Unauthenticated(firstVisit: false)`, con destino a Bienvenida. No se registran tokens en logs.
+
+Los contextos consumidores pueden inyectar `AuthorizedClient` (contrato `http.Client`) para añadir Bearer y repetir una solicitud una sola vez después de un 401 y refresh correcto. Los refresh concurrentes en curso comparten una misma operación. El cliente HTTP de autenticación es independiente de ese wrapper para evitar recursión. Ningún modelo de transporte de Profiles entra en el dominio IAM.
