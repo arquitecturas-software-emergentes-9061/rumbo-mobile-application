@@ -31,4 +31,14 @@ El dominio no depende de Flutter ni de infraestructura. El contrato del reposito
 
 ## Estado de esta entrega
 
-La base contiene tema, router, configuración de API, composición de dependencias y pantallas de marcador de posición. La Fase 1 agrega entidades y un contrato de repositorio BLE en Navigation, una fachada de aplicación, modelos y un proveedor de canales de plataforma, un servicio Android para escaneo y CSV, y un BLoC con pantalla de diagnóstico disponible solo en debug. La Fase 2 agrega un modelo de mediciones por identificador lógico y algoritmos de comparación RSSI en Dart puro. La captura sigue siendo Android; el adaptador iOS está diseñado pero pendiente. Véanse [Captura de RSSI de referencia](ble_reference_capture.md) y [Fase 2 multiplataforma](multiplatform_ble_phase2.md).
+La base contiene tema, router, configuración de API y composición de dependencias. Navigation incorpora captura BLE de diagnóstico con escaneo Android y exportación CSV, más el análisis RSSI en Dart puro. La captura iOS sigue pendiente. Véanse [Captura de RSSI de referencia](ble_reference_capture.md) y [Fase 2 multiplataforma](multiplatform_ble_phase2.md). La búsqueda de destinos incorpora fachada, repositorio y fuentes remota y de muestra; Perfil incorpora preferencias de ruta.
+
+El arranque incorpora IAM: `SessionFacade`, `SessionCubit`, repositorio, API HTTP y almacenamiento seguro inyectado. El router protege el shell y ofrece Bienvenida, Iniciar sesión, Crear cuenta y recuperación con Reintentar. La pantalla de diagnóstico BLE solo se registra en Android debug. Perfil ofrece cierre de sesión.
+
+### Regla de primera visita (PR-51)
+
+`SessionFacade.restore()` distingue la ausencia de sesión guardada (`Unauthenticated(firstVisit: true)`, Bienvenida) del rechazo del refresh por cualquier 4xx (`SessionExpired`, Iniciar sesión con aviso y correo precargado). Un refresh correcto consulta `profiles/me/preferences`: `configured: false` dirige a `/profile`; `configured: true`, a `/home`. Un error de red, 5xx o una respuesta de preferencias no utilizable ofrece Reintentar sin borrar la sesión.
+
+Solo se persisten refresh token, correo y userId en un registro seguro. El access token vive en memoria. Cada refresh rotado se guarda antes de consultar preferencias. Al expirar se retira el token y se conservan correo y userId; el cierre de sesión también retira los tokens y establece `Unauthenticated(firstVisit: false)`, con destino a Bienvenida. No se registran tokens en logs.
+
+Los contextos consumidores pueden inyectar `AuthorizedClient` (contrato `http.Client`) para añadir Bearer y repetir una solicitud una sola vez después de un 401 y refresh correcto. Los refresh concurrentes en curso comparten una misma operación. El cliente HTTP de autenticación es independiente de ese wrapper para evitar recursión. Ningún modelo de transporte de Profiles entra en el dominio IAM.
