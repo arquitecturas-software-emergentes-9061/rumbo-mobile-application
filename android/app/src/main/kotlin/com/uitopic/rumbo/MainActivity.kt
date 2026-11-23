@@ -43,6 +43,12 @@ class MainActivity : FlutterActivity() {
                 "exportTrackingCsv" -> {
                     beginCsvExport(RumboArBridge.trackingLogFile(this), AR_CSV_FILE, result)
                 }
+                "suspend" -> {
+                    startActivity(Intent(this, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    })
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -65,14 +71,21 @@ class MainActivity : FlutterActivity() {
                         beginCsvExport(File(filesDir, BleScanService.CSV_FILE), BleScanService.CSV_FILE, result)
                     }
                 }
-                "discover", "startCapture" -> {
+                "discover", "startCapture", "startNavigation" -> {
                     if (!BleScanService.reserveStart()) {
                         result.error("ALREADY_RUNNING", "Ya hay un escaneo BLE activo.", null)
                         return@setMethodCallHandler
                     }
                     try {
                         val intent = Intent(this, BleScanService::class.java).apply {
-                            action = if (call.method == "discover") BleScanService.ACTION_DISCOVER else BleScanService.ACTION_CAPTURE
+                            action = when (call.method) {
+                                "discover" -> BleScanService.ACTION_DISCOVER
+                                "startNavigation" -> BleScanService.ACTION_NAVIGATION
+                                else -> BleScanService.ACTION_CAPTURE
+                            }
+                            if (call.method == "startNavigation") {
+                                putStringArrayListExtra("beaconIdentities", ArrayList(call.argument<List<String>>("beaconIdentities") ?: emptyList()))
+                            }
                             if (call.method == "startCapture") {
                                 putExtra("referenceLocation", call.argument<String>("referenceLocation"))
                                 putExtra("condition", call.argument<String>("condition"))

@@ -1,4 +1,8 @@
 import 'package:get_it/get_it.dart';
+import 'navigation/application/indoor_navigation_cubit.dart';
+import 'navigation/domain/repositories/indoor_navigation_repository.dart';
+import 'navigation/infrastructure/repositories/indoor_navigation_http_repository.dart';
+import 'navigation/infrastructure/data_sources/android_navigation_scan_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:rumbo_mobile_application/navigation/application/ble_diagnostics_facade_service.dart';
@@ -86,6 +90,21 @@ Future<void> setupDependencies() async {
   );
   serviceLocator.registerLazySingleton<AuthorizedClient>(
     () => AuthorizedClient(serviceLocator(), serviceLocator()),
+  );
+  serviceLocator.registerLazySingleton<IndoorNavigationRepository>(
+    () => IndoorNavigationHttpRepository(
+      serviceLocator<AuthorizedClient>(),
+      serviceLocator<ApiConfiguration>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<IndoorNavigationCubit>(
+    () => IndoorNavigationCubit(
+      serviceLocator<IndoorNavigationRepository>(),
+      AndroidNavigationScanService(
+        serviceLocator<BlePlatformDataProvider>(),
+        serviceLocator<BlePermissionService>(),
+      ),
+    ),
   );
   serviceLocator.registerLazySingleton<ProfileRepository>(
     () =>

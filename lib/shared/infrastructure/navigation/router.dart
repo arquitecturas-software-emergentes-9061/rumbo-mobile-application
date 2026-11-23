@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
+import '../../../navigation/application/indoor_navigation_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rumbo_mobile_application/injections.dart';
@@ -21,6 +23,13 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
   redirect: (context, route) {
     final state = session.state;
     final path = route.uri.path;
+    if ((state is Unauthenticated || state is SessionExpired) &&
+        serviceLocator.isRegistered<IndoorNavigationCubit>()) {
+      final navigation = serviceLocator<IndoorNavigationCubit>();
+      if (navigation.state.sessionId.isNotEmpty) {
+        unawaited(navigation.stop().catchError((Object _) {}));
+      }
+    }
     if (state is SessionLoading || state is RetryableError) {
       return path == '/session' ? null : '/session';
     }
@@ -43,6 +52,11 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
     return null;
   },
   routes: [
+    if (kDebugMode)
+      GoRoute(
+        path: '/developer/ar',
+        builder: (_, _) => const ArDiagnosticsScreen(),
+      ),
     if (kDebugMode &&
         !kIsWeb &&
         defaultTargetPlatform == TargetPlatform.android)
@@ -107,7 +121,11 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
           routes: [
             GoRoute(
               path: '/route',
-              builder: (context, state) => const RouteScreen(),
+              builder: (context, state) => RouteScreen(
+                destination: state.extra is Destination
+                    ? state.extra as Destination
+                    : null,
+              ),
             ),
           ],
         ),

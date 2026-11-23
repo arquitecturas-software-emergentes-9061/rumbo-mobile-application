@@ -23,9 +23,16 @@ class DestinationDetailScreen extends StatelessWidget {
             const NavigationTopBar(),
             const SizedBox(height: 18),
             TextButton.icon(
-              onPressed: () => context.canPop() ? context.pop() : context.go('/search'),
-              icon: const Icon(Icons.chevron_left, color: MockupPalette.primary),
-              label: const Text('Volver', style: TextStyle(color: MockupPalette.primary)),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/search'),
+              icon: const Icon(
+                Icons.chevron_left,
+                color: MockupPalette.primary,
+              ),
+              label: const Text(
+                'Volver',
+                style: TextStyle(color: MockupPalette.primary),
+              ),
               style: TextButton.styleFrom(
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
@@ -53,13 +60,20 @@ class DestinationDetailScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.image_outlined, color: MockupPalette.textMuted, size: 30),
+            const Icon(
+              Icons.image_outlined,
+              color: MockupPalette.textMuted,
+              size: 30,
+            ),
             const SizedBox(height: 6),
             Text(
               d.room != null
                   ? 'Imagen: entrada del Consultorio ${d.room}'
                   : 'Imagen: entrada de ${d.name}',
-              style: const TextStyle(color: MockupPalette.textMuted, fontSize: 12),
+              style: const TextStyle(
+                color: MockupPalette.textMuted,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -92,7 +106,11 @@ class DestinationDetailScreen extends StatelessWidget {
             : 'Piso ${d.floor} • ${d.siteName}',
       ),
       if (d.specialist != null)
-        _InfoRow(icon: Icons.person_outline, label: 'Especialista', value: d.specialist!),
+        _InfoRow(
+          icon: Icons.person_outline,
+          label: 'Especialista',
+          value: d.specialist!,
+        ),
       if (d.referencePoint != null)
         _InfoRow(
           icon: Icons.place_outlined,
@@ -127,7 +145,10 @@ class DestinationDetailScreen extends StatelessWidget {
                     if (d.accessibleRouteNote != null)
                       Text(
                         d.accessibleRouteNote!,
-                        style: const TextStyle(color: MockupPalette.textMuted, fontSize: 12),
+                        style: const TextStyle(
+                          color: MockupPalette.textMuted,
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
@@ -139,14 +160,17 @@ class DestinationDetailScreen extends StatelessWidget {
       SizedBox(
         height: 52,
         child: FilledButton(
-          // El cálculo de ruta y el guiado pertenecen a otra historia; por ahora
-          // se abre la pestaña Ruta.
-          onPressed: () => context.go('/route'),
+          onPressed: () => context.go('/route', extra: d),
           style: FilledButton.styleFrom(
             backgroundColor: MockupPalette.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
-          child: const Text('Iniciar navegación →', style: TextStyle(fontSize: 16)),
+          child: const Text(
+            'Iniciar navegación →',
+            style: TextStyle(fontSize: 16),
+          ),
         ),
       ),
     ];
@@ -154,7 +178,11 @@ class DestinationDetailScreen extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -175,7 +203,10 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: MockupPalette.textMuted, fontSize: 12),
+                  style: const TextStyle(
+                    color: MockupPalette.textMuted,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   value,
@@ -204,7 +235,10 @@ class _Unavailable extends StatelessWidget {
       child: Text(
         'Este destino no está disponible. Vuelve a buscarlo.',
         textAlign: TextAlign.center,
-        style: TextStyle(color: MockupPalette.primary, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: MockupPalette.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

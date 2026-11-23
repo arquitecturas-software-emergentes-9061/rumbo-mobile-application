@@ -1,0 +1,13 @@
+# Navigation Sprint 2: límites de integración
+
+La app consume el inventario real `GET /api/v1/sites/{siteId}/beacons` y rutas `GET /api/v1/sites/{siteId}/routes?from=...&to=...&accessibleOnly=...&avoidStairs=...&prioritizeElevators=...` mediante `AuthorizedClient`. El backend local exige `CLINIC_ADMIN` y propiedad de sede para rutas; no se modificó esa política. El directorio debe aportar `siteId` y `nodeId` publicados para iniciar desde el detalle; los campos manuales se limitan a debug.
+
+No se encontró un endpoint de resolución BLE de origen. `RUMBO_ORIGIN_PATH` queda vacío por defecto: el cliente muestra baja confianza y no inventa coordenadas. El adaptador configurable propone POST con `siteId` y `observations` (uuid, major, minor, rssiDbm, timestampUtc); espera siteId, floorId, nodeId, modelVersionId, planVersionId, x, y, observedAt y reliable. Este contrato requiere acuerdo y validación con Backend; no se presenta como endpoint existente. La confianza espacial debe proceder de calibración validada, no del valor de desviación RSSI.
+
+El renderizador dibuja exclusivamente segmentos reales de los nodos de la ruta en el piso y planVersionId actual. No reconstruye paredes ni interpola una posición métrica. El criterio inicial de desvío es topológico: un nodo reconocido fuera de la ruta, al menos 3 fixes distintos durante 8 segundos; se reinicia con baja confianza o regreso a la ruta. El umbral temporal es configurable. Las distancias al corredor en metros requieren escala y geometría adicionales; no se deducen del RSSI.
+
+El canal AR comparte una suscripción nativa entre consumidores. `limited`/`lost` aceptados solicitan traer Flutter al frente, conservando la sesión y pausando la actividad Unity. No se reabre AR automáticamente: `normal` no equivale a alinear coordenadas del plano con Unity. El guiado AR queda pendiente del contrato de referencia espacial; se conserva el diagnóstico demo separado en `/developer/ar`.
+
+Figma MCP respondió límite del plan antes de entregar el primer frame. Los estados visuales se implementaron con componentes y tema actuales; ninguno de los 11 frames pudo cotejarse visualmente.
+
+Prueba física pendiente: usuario autorizado, sede/modelo publicados, directorio con nodo destino, balizas inventariadas y calibración de origen. Comprobar permisos denegados, Bluetooth apagado, captura diagnóstica ya activa, dos ciclos 5/15 con pantalla bloqueada, pérdida y recuperación de señal, recorrido con cambio de piso, desvío persistente y variación transitoria. Para AR se necesita APK con unityLibrary y dispositivo ARCore: comprobar retorno a 2D, sesión/destino conservados y liberación de cámara. Los tests con respuestas controladas no sustituyen estas pruebas.

@@ -36,6 +36,7 @@ class BleScanService : Service() {
     private var scanner: BluetoothLeScanner? = null
     private var scanning = false
     private var discovery = false
+    private var navigation = false
     private var running = false
     private var windowResults = 0
     private var referenceLocation = ""
@@ -81,7 +82,8 @@ class BleScanService : Service() {
         if (running) return START_NOT_STICKY
 
         discovery = intent?.action == ACTION_DISCOVER
-        if (!discovery && intent?.action != ACTION_CAPTURE) {
+        navigation = intent?.action == ACTION_NAVIGATION
+        if (!discovery && !navigation && intent?.action != ACTION_CAPTURE) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -94,7 +96,21 @@ class BleScanService : Service() {
 
         try {
             startForeground(NOTIFICATION_ID, buildNotification())
-            if (!discovery) {
+            if (navigation) {
+                scanFilters = intent?.getStringArrayListExtra("beaconIdentities").orEmpty().distinct().map { identity ->
+                    val parts = identity.split('/')
+                    require(parts.size == 3) { "Identidad de baliza inválida." }
+                    val uuid = UUID.fromString(parts[0])
+                    val major = parts[1].toInt()
+                    val minor = parts[2].toInt()
+                    require(major in 0..65535 && minor in 0..65535)
+                    val data = java.nio.ByteBuffer.allocate(22).put(0x02.toByte()).put(0x15.toByte())
+                        .putLong(uuid.mostSignificantBits).putLong(uuid.leastSignificantBits)
+                        .putShort(major.toShort()).putShort(minor.toShort()).array()
+                    ScanFilter.Builder().setManufacturerData(0x004C, data, ByteArray(data.size) { 0xFF.toByte() }).build()
+                }
+                require(scanFilters.isNotEmpty()) { "No hay balizas registradas para navegar." }
+            } else if (!discovery) {
                 referenceLocation = intent?.getStringExtra("referenceLocation")?.trim().orEmpty()
                 condition = intent?.getStringExtra("condition")?.trim().orEmpty()
                 runId = UUID.randomUUID().toString()
@@ -209,7 +225,7 @@ class BleScanService : Service() {
             lastEmittedAt[deviceId] = now
             BleScanBus.observation(deviceId, name, result.rssi, now, manufacturerData)
         }
-        if (discovery || now - (lastRecordedAt[deviceId] ?: 0L) < SAMPLE_INTERVAL_MS) return
+        if (discovery || navigation || now - (lastRecordedAt[deviceId] ?: 0L) < SAMPLE_INTERVAL_MS) return
 
         lastRecordedAt[deviceId] = now
         val rssi = result.rssi
@@ -359,6 +375,7 @@ class BleScanService : Service() {
     companion object {
         const val ACTION_DISCOVER = "com.uitopic.rumbo.ble.DISCOVER"
         const val ACTION_CAPTURE = "com.uitopic.rumbo.ble.CAPTURE"
+        const val ACTION_NAVIGATION = "com.uitopic.rumbo.ble.NAVIGATION"
         const val ACTION_STOP = "com.uitopic.rumbo.ble.STOP"
         const val CSV_FILE = "rumbo_rssi_reference_v2.csv"
         private const val PREFERENCES = "rumbo_ble_capture"

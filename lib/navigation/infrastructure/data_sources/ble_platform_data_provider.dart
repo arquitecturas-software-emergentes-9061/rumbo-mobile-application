@@ -9,9 +9,11 @@ class BlePlatformDataProvider {
 
   static const _methods = MethodChannel('com.uitopic.rumbo/ble_scan');
   static const _events = EventChannel('com.uitopic.rumbo/ble_scan/events');
+  static final _sharedEvents = _events.receiveBroadcastStream().map(
+    BleScanEventModel.fromPlatform,
+  );
 
-  Stream<BleScanEventModel> get events =>
-      _events.receiveBroadcastStream().map(BleScanEventModel.fromPlatform);
+  Stream<BleScanEventModel> get events => _sharedEvents;
 
   Future<void> discover() => _methods.invokeMethod<void>('discover');
 

@@ -18,11 +18,15 @@ class DestinationModel {
     this.accessibleRouteNote,
     this.keywords = const [],
     this.navigable = true,
+    this.siteId,
+    this.nodeId,
   });
 
   factory DestinationModel.fromJson(Map<String, dynamic> json) {
     return DestinationModel(
       id: json['id'] as String,
+      siteId: json['siteId'] as String?,
+      nodeId: json['nodeId'] as String?,
       name: json['name'] as String,
       kind: json['kind'] as String,
       floor: (json['floor'] as num).toInt(),
@@ -40,6 +44,7 @@ class DestinationModel {
   }
 
   final String id;
+  final String? siteId, nodeId;
   final String name;
   final String kind;
   final int floor;
@@ -55,21 +60,23 @@ class DestinationModel {
   final bool navigable;
 
   Destination toEntity() => Destination(
-        id: id,
-        name: name,
-        kind: _kindFrom(kind),
-        floor: floor,
-        zone: zone,
-        room: room,
-        siteName: siteName,
-        specialist: specialist,
-        referencePoint: referencePoint,
-        estimatedMinutes: estimatedMinutes,
-        distanceMeters: distanceMeters,
-        accessibleRouteNote: accessibleRouteNote,
-        keywords: keywords,
-        isNavigable: navigable,
-      );
+    id: id,
+    siteId: siteId,
+    nodeId: nodeId,
+    name: name,
+    kind: _kindFrom(kind),
+    floor: floor,
+    zone: zone,
+    room: room,
+    siteName: siteName,
+    specialist: specialist,
+    referencePoint: referencePoint,
+    estimatedMinutes: estimatedMinutes,
+    distanceMeters: distanceMeters,
+    accessibleRouteNote: accessibleRouteNote,
+    keywords: keywords,
+    isNavigable: navigable,
+  );
 
   static DestinationKind _kindFrom(String value) {
     switch (value.toUpperCase()) {

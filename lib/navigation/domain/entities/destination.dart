@@ -36,9 +36,12 @@ class Destination {
     this.accessibleRouteNote,
     this.keywords = const [],
     this.isNavigable = true,
+    this.siteId,
+    this.nodeId,
   });
 
   final String id;
+  final String? siteId, nodeId;
   final String name;
   final DestinationKind kind;
   final int floor;
@@ -62,5 +65,6 @@ class Destination {
       zone == null ? 'Piso $floor' : 'Piso $floor · $zone';
 
   /// Un destino es válido para iniciar guiado si tiene identidad y es navegable.
-  bool get isValid => id.trim().isNotEmpty && name.trim().isNotEmpty && isNavigable;
+  bool get isValid =>
+      id.trim().isNotEmpty && name.trim().isNotEmpty && isNavigable;
 }
