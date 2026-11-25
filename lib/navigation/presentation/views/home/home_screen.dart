@@ -18,7 +18,17 @@ class HomeScreen extends StatelessWidget {
             icon: Icons.navigation_outlined,
           ),
         ),
-        if (kDebugMode && defaultTargetPlatform == TargetPlatform.android)
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: FilledButton.icon(
+            onPressed: () => context.push('/planning/maps'),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Consultar mapas publicados'),
+          ),
+        ),
+        if (kDebugMode &&
+            !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.android)
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextButton.icon(

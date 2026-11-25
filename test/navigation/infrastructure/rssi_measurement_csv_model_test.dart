@@ -57,6 +57,25 @@ void main() {
     expect(result.unresolvedCount, 1);
   });
 
+  test('preserves session IDs from the new Android CSV', () {
+    const csv =
+        'timestamp_utc,device_id,advertised_name,manufacturer_data,rssi_dbm,reference_location,condition,run_id\n'
+        '"2026-01-01T10:00:00.000Z","AA:BB:CC:DD:EE:FF","Beacon",'
+        '"004C:021500112233445566778899AABBCCDDEEFF002A0007C5",'
+        '"-71","A","quieta","session-a"\n'
+        '"2026-01-01T11:00:00.000Z","AA:BB:CC:DD:EE:FF","Beacon",'
+        '"004C:021500112233445566778899AABBCCDDEEFF002A0007C5",'
+        '"-73","B","quieta","session-b"\n';
+    final result = const AndroidPhase1RssiCsvAdapter().normalize(
+      csv,
+      sourceId: 'pixel-device',
+      runId: 'legacy-only',
+    );
+    expect(result.measurements.map((sample) => sample.runId), [
+      'session-a', 'session-b',
+    ]);
+  });
+
   test('does not infer a logical ID from a device address alone', () {
     const legacy =
         'timestamp_utc,device_id,advertised_name,manufacturer_data,rssi_dbm,reference_location,condition\n'

@@ -19,6 +19,7 @@ class FakeBleDiagnosticsRepository
   int stopCalls = 0;
   int advertiseCalls = 0;
   int stopAdvertiseCalls = 0;
+  int exportCalls = 0;
 
   @override
   Stream<BleScanEvent> get events => controller.stream;
@@ -42,6 +43,12 @@ class FakeBleDiagnosticsRepository
 
   @override
   Future<void> stopReferenceAdvertiser() async => stopAdvertiseCalls++;
+
+  @override
+  Future<bool> exportCsv() async {
+    exportCalls++;
+    return true;
+  }
 
   @override
   Future<BleScanSnapshot> snapshot() async => const BleScanSnapshot(
@@ -117,6 +124,22 @@ void main() {
     expect(repository.advertiseCalls, 1);
   });
 
+  test('CSV export and reference advertising remain independent', () async {
+    expect(await bloc.startReferenceAdvertiser('service-uuid'), isTrue);
+    final exported = bloc.stream.firstWhere(
+      (state) => state.message == 'CSV exportado.',
+    );
+    bloc.add(const BleCsvExportRequested());
+    await exported;
+    expect(repository.advertiseCalls, 1);
+    expect(repository.exportCalls, 1);
+    expect(repository.stopAdvertiseCalls, 0);
+
+    await bloc.stopReferenceAdvertiser();
+    expect(repository.stopAdvertiseCalls, 1);
+    expect(repository.stopCalls, 0);
+  });
+
   test('does not start a second capture while one is active', () async {
     final configuration = AndroidBleSessionConfiguration(
       referenceLocation: 'Piso 1',
@@ -158,5 +181,26 @@ void main() {
   test('closing diagnostics does not stop the native capture', () async {
     await bloc.close();
     expect(repository.stopCalls, 0);
+  });
+
+  test('exports the CSV only after capture is inactive', () async {
+    final active = bloc.stream.firstWhere(
+      (state) => state.status == 'scanning',
+    );
+    repository.controller.add(const BleScanStatusChanged('scanning', ''));
+    await active;
+    bloc.add(const BleCsvExportRequested());
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.exportCalls, 0);
+
+    final idle = bloc.stream.firstWhere((state) => state.status == 'idle');
+    repository.controller.add(const BleScanStatusChanged('idle', ''));
+    await idle;
+    final exported = bloc.stream.firstWhere(
+      (state) => state.message == 'CSV exportado.',
+    );
+    bloc.add(const BleCsvExportRequested());
+    await exported;
+    expect(repository.exportCalls, 1);
   });
 }

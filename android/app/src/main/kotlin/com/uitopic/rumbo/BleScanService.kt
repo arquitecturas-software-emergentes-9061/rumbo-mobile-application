@@ -40,6 +40,7 @@ class BleScanService : Service() {
     private var windowResults = 0
     private var referenceLocation = ""
     private var condition = ""
+    private var runId = ""
     private var scanFilters: List<ScanFilter> = emptyList()
     private val lastRecordedAt = mutableMapOf<String, Long>()
     private val lastEmittedAt = mutableMapOf<String, Long>()
@@ -96,9 +97,10 @@ class BleScanService : Service() {
             if (!discovery) {
                 referenceLocation = intent?.getStringExtra("referenceLocation")?.trim().orEmpty()
                 condition = intent?.getStringExtra("condition")?.trim().orEmpty()
+                runId = UUID.randomUUID().toString()
                 val addresses = intent?.getStringArrayListExtra("deviceAddresses").orEmpty()
                 val serviceUuids = intent?.getStringArrayListExtra("serviceUuids").orEmpty()
-                if (referenceLocation.isEmpty || condition.isEmpty) {
+                if (referenceLocation.isEmpty() || condition.isEmpty()) {
                     throw IllegalArgumentException("Faltan ubicación o condición de prueba.")
                 }
                 scanFilters = buildFilters(addresses, serviceUuids)
@@ -211,9 +213,12 @@ class BleScanService : Service() {
 
         lastRecordedAt[deviceId] = now
         val rssi = result.rssi
+        val sampleLocation = referenceLocation
+        val sampleCondition = condition
+        val sampleRunId = runId
         writer.execute {
             try {
-                appendCsv(now, deviceId, name, manufacturerData, rssi)
+                appendCsv(now, deviceId, name, manufacturerData, rssi, sampleLocation, sampleCondition, sampleRunId)
                 persistedCount++
                 getSharedPreferences(PREFERENCES, MODE_PRIVATE)
                     .edit().putInt("saved_count", persistedCount).apply()
@@ -230,6 +235,9 @@ class BleScanService : Service() {
         name: String,
         manufacturerData: String,
         rssi: Int,
+        sampleLocation: String,
+        sampleCondition: String,
+        sampleRunId: String,
     ) {
         val file = File(filesDir, CSV_FILE)
         val headerNeeded = !file.exists() || file.length() == 0L
@@ -244,8 +252,9 @@ class BleScanService : Service() {
                     name,
                     manufacturerData,
                     rssi,
-                    referenceLocation,
-                    condition,
+                    sampleLocation,
+                    sampleCondition,
+                    sampleRunId,
                 ),
             )
         }
@@ -351,7 +360,7 @@ class BleScanService : Service() {
         const val ACTION_DISCOVER = "com.uitopic.rumbo.ble.DISCOVER"
         const val ACTION_CAPTURE = "com.uitopic.rumbo.ble.CAPTURE"
         const val ACTION_STOP = "com.uitopic.rumbo.ble.STOP"
-        const val CSV_FILE = "rumbo_rssi_reference.csv"
+        const val CSV_FILE = "rumbo_rssi_reference_v2.csv"
         private const val PREFERENCES = "rumbo_ble_capture"
         private const val NOTIFICATION_ID = 4242
         private const val DISCOVERY_MS = 10_000L

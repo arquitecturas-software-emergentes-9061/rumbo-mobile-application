@@ -38,6 +38,7 @@ class BleDiagnosticsFacadeService<T extends BleCaptureSession> {
 
   Future<void> stopReferenceAdvertiser() =>
       bleDiagnosticsRepository.stopReferenceAdvertiser();
+  Future<bool> exportCsv() => bleDiagnosticsRepository.exportCsv();
 
   Future<BleScanSnapshot> snapshot() => bleDiagnosticsRepository.snapshot();
 

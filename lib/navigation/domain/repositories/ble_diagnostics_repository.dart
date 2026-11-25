@@ -10,5 +10,6 @@ abstract class BleDiagnosticsRepository<T extends BleCaptureSession> {
   Future<void> stop();
   Future<void> startReferenceAdvertiser(String beaconUuid);
   Future<void> stopReferenceAdvertiser();
+  Future<bool> exportCsv();
   Future<BleScanSnapshot> snapshot();
 }

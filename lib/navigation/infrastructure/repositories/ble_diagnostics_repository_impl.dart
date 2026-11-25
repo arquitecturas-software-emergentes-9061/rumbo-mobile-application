@@ -37,6 +37,9 @@ class BleDiagnosticsRepositoryImpl
       blePlatformDataProvider.stopReferenceAdvertiser();
 
   @override
+  Future<bool> exportCsv() => blePlatformDataProvider.exportCsv();
+
+  @override
   Future<BleScanSnapshot> snapshot() async {
     final model = await blePlatformDataProvider.snapshot();
     return model.toDomain();

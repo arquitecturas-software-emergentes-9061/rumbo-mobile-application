@@ -7,7 +7,7 @@ import java.util.TimeZone
 
 /** CSV rows are self-contained so each observation can be flushed immediately. */
 object BleCsvFormatter {
-    const val HEADER = "timestamp_utc,device_id,advertised_name,manufacturer_data,rssi_dbm,reference_location,condition"
+    const val HEADER = "timestamp_utc,device_id,advertised_name,manufacturer_data,rssi_dbm,reference_location,condition,run_id"
 
     fun row(
         timestampMs: Long,
@@ -17,6 +17,7 @@ object BleCsvFormatter {
         rssi: Int,
         referenceLocation: String,
         condition: String,
+        runId: String,
     ): String {
         val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -29,6 +30,7 @@ object BleCsvFormatter {
             rssi.toString(),
             referenceLocation,
             condition,
+            runId,
         ).joinToString(",") { cell(it) }
     }
 

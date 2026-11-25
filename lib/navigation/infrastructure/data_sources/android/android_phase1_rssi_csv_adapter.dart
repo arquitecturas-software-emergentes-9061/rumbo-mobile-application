@@ -33,7 +33,12 @@ class AndroidPhase1RssiCsvAdapter {
     ];
     final measurements = <RssiMeasurement>[];
     var unresolved = 0;
-    for (final row in const RssiMeasurementCsvModel().records(csv, columns)) {
+    final hasRunId = csv.trimLeft().startsWith('${columns.join(',')},run_id');
+    final rows = const RssiMeasurementCsvModel().records(
+      csv,
+      hasRunId ? [...columns, 'run_id'] : columns,
+    );
+    for (final row in rows) {
       final address = row['device_id']!.toUpperCase();
       final fromPayload = _iBeaconFromManufacturerData(
         row['manufacturer_data']!,
@@ -57,7 +62,7 @@ class AndroidPhase1RssiCsvAdapter {
           referenceLocation: row['reference_location']!,
           condition: row['condition']!,
           sourceId: sourceId,
-          runId: runId,
+          runId: hasRunId ? row['run_id']! : runId,
         ),
       );
     }

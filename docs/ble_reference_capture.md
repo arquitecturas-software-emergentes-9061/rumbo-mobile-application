@@ -23,7 +23,9 @@ Como las lecturas se usarán para posicionamiento, el manifiesto solicita ubicac
 7. Repetir con otra ubicación o condición: detener primero la sesión y volver a iniciarla con las nuevas etiquetas. El CSV conserva las filas anteriores.
 8. Detener desde la pantalla o la notificación. Verificar que no sigan apareciendo muestras nuevas.
 
-La pantalla muestra la ruta del archivo `rumbo_rssi_reference.csv` en el almacenamiento privado. En una compilación debug puede extraerse con **Android Studio → Device Explorer** desde la ruta mostrada. Las columnas son `timestamp_utc`, `device_id`, `advertised_name`, `manufacturer_data`, `rssi_dbm`, `reference_location` y `condition`. Los nombres y direcciones proceden del anuncio BLE; no se asume que la dirección sea un identificador permanente ni que mayor RSSI implique menor distancia.
+Tras detener la captura, pulsa **Exportar CSV RSSI** y elige dónde guardar `rumbo_rssi_reference_v2.csv`. La pantalla también muestra la ruta privada para **Android Studio → Device Explorer**. Las columnas son `timestamp_utc`, `device_id`, `advertised_name`, `manufacturer_data`, `rssi_dbm`, `reference_location`, `condition` y `run_id`. Cada inicio de captura genera un `run_id` UUID que se repite en las filas de esa sesión. El archivo anterior `rumbo_rssi_reference.csv` permanece intacto en el mismo directorio. Los nombres y direcciones proceden del anuncio BLE; no se asume que la dirección sea un identificador permanente ni que mayor RSSI implique menor distancia.
+
+Para normalizar el archivo nuevo: `dart run tool/rssi_analysis.dart normalize-android rumbo_rssi_reference_v2.csv normalizado.csv pixel-1 legacy-only`. El adaptador conserva el `run_id` de cada fila; el último argumento solo se usa con archivos antiguos. Después, `dart run tool/rssi_analysis.dart select-run normalizado.csv calibracion.csv <run_id>` y lo mismo para la sesión de prueba. Ejecutar `dart run tool/rssi_analysis.dart compare calibracion.csv prueba.csv`. Conservar los originales: la herramienta no sobrescribe salidas. Las filas sin identidad iBeacon verificable se cuentan y omiten; pedir a Julio el inventario real si el hardware no emite ese payload. El reporte expresa dispersión y diferencias RSSI en dB, y una estimación de ubicación por comparación; no es error espacial en metros.
 
 ## Dependencias con otros WI
 
@@ -38,11 +40,14 @@ No se necesitan balizas comerciales para el primer experimento. En un segundo te
 
 La opción usa el emisor BLE del sistema Android; no inventa mediciones RSSI. Requiere Android 12 o posterior con Bluetooth LE Peripheral/Advertiser disponible. Una laptop alternativa debe emitir la misma trama iBeacon, no solo un servicio GATT. El CSV Android guarda `manufacturer_data=004C:0215...`; `normalize-android` reconoce esa identidad sin asignar MAC como identidad lógica. Cada emisor simultáneo necesita un UUID distinto. La comparación de huellas en `RssiAnalysisService` exige al menos dos emisores compartidos entre calibración y prueba; con uno solo se pueden estudiar dispersión y estabilidad, pero no concluir una ubicación. La distancia conocida se registra como referencia del ensayo; RSSI no se convierte a metros. El modo emisor es solo para diagnóstico y se detiene al salir de la pantalla o cerrar la actividad.
 
-Para un emisor, separar el CSV acumulativo por corrida y conservar la cabecera; luego normalizar y resumir cada archivo:
+El CSV v2 conserva `run_id`. Normalizarlo completo y usar `select-run` para separar las corridas antes de comparar. Para un emisor también puede resumirse una corrida ya seleccionada:
 
 ```sh
-dart run tool/rssi_analysis.dart normalize-android corrida-a.csv corrida-a-normalizada.csv telefono-1 corrida-a
+dart run tool/rssi_analysis.dart normalize-android rumbo_rssi_reference_v2.csv normalizado.csv telefono-1 legacy-only
+dart run tool/rssi_analysis.dart select-run normalizado.csv corrida-a-normalizada.csv <run_id>
 dart run tool/rssi_analysis.dart summarize corrida-a-normalizada.csv
 ```
 
 El resumen muestra cantidad, media, mediana, desviación estándar, MAD y valores atípicos por ubicación, condición y baliza. Mantener la distancia física anotada fuera del CSV como referencia del ensayo. La estadística de señal no representa por sí sola error de posición en metros. Para evaluar ubicación, captar al menos dos emisores distintos en cada punto y usar corridas independientes de calibración y prueba con el comando `compare`.
+
+La calibración para comparar ubicación debe reunir lecturas de al menos dos puntos de referencia de la misma fuente y condición; puede combinar varias corridas conservando sus `run_id` y una sola cabecera CSV. El archivo de prueba debe contener una única corrida, ubicación y condición, excluida de la calibración. `select-run` permite separar esa prueba sin mezclar sesiones; `compare` rechaza un archivo de prueba con referencias mezcladas.
