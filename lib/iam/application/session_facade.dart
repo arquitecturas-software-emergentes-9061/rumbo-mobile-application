@@ -42,6 +42,13 @@ class SessionFacade extends ChangeNotifier {
     notifyListeners();
   }
 
+  void markProfileConfigured() {
+    final current = state;
+    if (current is Authenticated && !current.profileConfigured) {
+      _set(const Authenticated(profileConfigured: true));
+    }
+  }
+
   // First visit means no saved session. A rejected refresh is expired;
   // configured=false means a first account visit and routes to /profile.
   // Network/5xx failures retain storage, including any rotated refresh token.

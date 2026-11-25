@@ -4,9 +4,14 @@ import '../../../infrastructure/profile_repository.dart';
 import 'route_preference_controls.dart';
 
 class ProfilePreferencesPanel extends StatefulWidget {
-  const ProfilePreferencesPanel({required this.repository, super.key});
+  const ProfilePreferencesPanel({
+    required this.repository,
+    this.onConfigured,
+    super.key,
+  });
 
   final ProfileRepository repository;
+  final VoidCallback? onConfigured;
 
   @override
   State<ProfilePreferencesPanel> createState() =>
@@ -33,7 +38,10 @@ class _ProfilePreferencesPanelState extends State<ProfilePreferencesPanel> {
       final value = await (change == null
           ? widget.repository.preferences()
           : widget.repository.savePreferences(change));
-      if (mounted) setState(() => _value = value);
+      if (mounted) {
+        setState(() => _value = value);
+        if (value.configured) widget.onConfigured?.call();
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'No se pudieron actualizar las preferencias.');

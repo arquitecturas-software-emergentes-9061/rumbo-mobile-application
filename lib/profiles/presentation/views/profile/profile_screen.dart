@@ -65,7 +65,10 @@ class ProfileScreen extends StatelessWidget {
                     Text(profile.phoneNumber!, textAlign: TextAlign.center),
                 ],
                 if (profile != null)
-                  ProfilePreferencesPanel(repository: serviceLocator()),
+                  ProfilePreferencesPanel(
+                    repository: serviceLocator(),
+                    onConfigured: session.markProfileConfigured,
+                  ),
                 const SizedBox(height: 24),
                 OutlinedButton(
                   onPressed: () async {

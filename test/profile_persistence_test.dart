@@ -185,6 +185,9 @@ void main() {
       'voiceGuidance': false,
       'configured': true,
     });
+    await tap('Inicio');
+    expect(find.text('Bienvenido a Rumbo'), findsOneWidget);
+    await tap('Perfil');
     await tap('Editar perfil');
     await edit('Ana Ruiz', '+51 999 111 222');
     expect(find.byType(EditProfileScreen), findsNothing);
