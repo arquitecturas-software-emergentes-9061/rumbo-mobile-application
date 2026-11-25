@@ -11,7 +11,6 @@ import 'package:flutter/services.dart';
 import 'package:rumbo_mobile_application/navigation/application/ar_prototype_facade.dart';
 import 'package:rumbo_mobile_application/navigation/domain/entities/ar_demo_instruction.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/ar_platform_bridge.dart';
-import 'package:rumbo_mobile_application/shared/presentation/widgets/foundation_page.dart';
 
 class RouteScreen extends StatelessWidget {
   const RouteScreen({this.destination, super.key});
@@ -116,48 +115,43 @@ class _RouteScreenState extends State<ArDiagnosticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Expanded(
-          child: FoundationPage(
-            title: 'Tu ruta',
-            description:
-                'Aquí se incorporarán el mapa y el guiado cuando se implementen sus historias.',
-            icon: Icons.alt_route,
-          ),
+    final arAvailable =
+        kDebugMode &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Diagnóstico AR')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (arAvailable) ...[
+              const Text('Coloca una flecha de prueba en el piso.'),
+              Text('Dirección: ${_heading.round()}°'),
+              Slider(
+                value: _heading,
+                max: 359,
+                divisions: 359,
+                onChanged: (value) => setState(() => _heading = value),
+              ),
+              OutlinedButton.icon(
+                onPressed: _openDemo,
+                icon: const Icon(Icons.view_in_ar),
+                label: const Text('Abrir prueba AR'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _exportTracking,
+                icon: const Icon(Icons.save_alt),
+                label: const Text('Exportar registro AR'),
+              ),
+              if (_status.isNotEmpty) Text(_status),
+            ] else
+              const Text(
+                'La prueba AR está disponible en Android en modo debug.',
+              ),
+          ],
         ),
-        if (kDebugMode &&
-            !kIsWeb &&
-            defaultTargetPlatform == TargetPlatform.android)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Prototipo AR · dirección de demostración, sin ruta real',
-                ),
-                Text('Dirección: ${_heading.round()}°'),
-                Slider(
-                  value: _heading,
-                  max: 359,
-                  divisions: 359,
-                  onChanged: (value) => setState(() => _heading = value),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _openDemo,
-                  icon: const Icon(Icons.view_in_ar),
-                  label: const Text('Abrir prueba AR'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _exportTracking,
-                  icon: const Icon(Icons.save_alt),
-                  label: const Text('Exportar registro AR'),
-                ),
-                if (_status.isNotEmpty) Text(_status),
-              ],
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

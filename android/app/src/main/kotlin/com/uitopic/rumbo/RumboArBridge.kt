@@ -9,8 +9,10 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.window.OnBackInvokedDispatcher
 import androidx.annotation.Keep
 import io.flutter.plugin.common.EventChannel
 import java.io.File
@@ -101,6 +103,14 @@ object RumboArBridge {
     @JvmStatic
     fun attachPlayer(activity: Activity) {
         handler.post {
+            if (player.get() != activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT
+                ) {
+                    event("closed", "android_back")
+                    showFlutter()
+                }
+            }
             player = WeakReference(activity)
             if (requestedDestination != null || requestedHeading != null) present()
         }
@@ -153,6 +163,11 @@ object RumboArBridge {
         hideNavigation()
         activity.startActivity(Intent(activity, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+    }
+
+    @JvmStatic
+    fun returnToFlutter() {
+        handler.post { showFlutter() }
     }
 
     fun updateHud(status: String, progress: Int) { hud?.update(status, progress) }
