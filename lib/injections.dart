@@ -22,6 +22,10 @@ import 'iam/infrastructure/auth_api.dart';
 import 'iam/infrastructure/secure_session_storage.dart';
 import 'iam/infrastructure/session_repository_impl.dart';
 import 'iam/presentation/session_cubit.dart';
+import 'planning/domain/published_model_repository.dart';
+import 'planning/infrastructure/published_model_repository_impl.dart';
+import 'planning/application/published_model_sync_service.dart';
+import 'planning/presentation/published_model_sync_cubit.dart';
 import 'profiles/infrastructure/profile_repository.dart';
 import 'profiles/domain/photo_picker.dart';
 import 'profiles/infrastructure/image_picker_photo_picker.dart';
@@ -81,11 +85,29 @@ Future<void> setupDependencies() async {
   serviceLocator.registerLazySingleton<SessionRepository>(
     () => SessionRepositoryImpl(serviceLocator(), serviceLocator()),
   );
-  serviceLocator.registerLazySingleton<SessionFacade>(
-    () => SessionFacade(serviceLocator()),
-  );
+  serviceLocator.registerLazySingleton<SessionFacade>(() {
+    final session = SessionFacade(serviceLocator());
+    session.addListener(() {
+      if (session.state is Unauthenticated || session.state is SessionExpired) {
+        serviceLocator<PublishedModelSyncService>().clear();
+      }
+    });
+    return session;
+  });
   serviceLocator.registerLazySingleton<AuthorizedClient>(
     () => AuthorizedClient(serviceLocator(), serviceLocator()),
+  );
+  serviceLocator.registerLazySingleton<PublishedModelRepository>(
+    () => PublishedModelRepositoryImpl(
+      serviceLocator<AuthorizedClient>(),
+      serviceLocator<ApiConfiguration>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<PublishedModelSyncService>(
+    () => PublishedModelSyncService(serviceLocator<PublishedModelRepository>()),
+  );
+  serviceLocator.registerFactory<PublishedModelSyncCubit>(
+    () => PublishedModelSyncCubit(serviceLocator<PublishedModelSyncService>()),
   );
   serviceLocator.registerLazySingleton<ProfileRepository>(
     () =>

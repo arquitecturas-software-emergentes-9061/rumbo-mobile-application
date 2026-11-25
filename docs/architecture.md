@@ -42,3 +42,13 @@ El arranque incorpora IAM: `SessionFacade`, `SessionCubit`, repositorio, API HTT
 Solo se persisten refresh token, correo y userId en un registro seguro. El access token vive en memoria. Cada refresh rotado se guarda antes de consultar preferencias. Al expirar se retira el token y se conservan correo y userId; el cierre de sesión también retira los tokens y establece `Unauthenticated(firstVisit: false)`, con destino a Bienvenida. No se registran tokens en logs.
 
 Los contextos consumidores pueden inyectar `AuthorizedClient` (contrato `http.Client`) para añadir Bearer y repetir una solicitud una sola vez después de un 401 y refresh correcto. Los refresh concurrentes en curso comparten una misma operación. El cliente HTTP de autenticación es independiente de ese wrapper para evitar recursión. Ningún modelo de transporte de Profiles entra en el dominio IAM.
+
+### Modelo oficial en Mobile (PR-244)
+
+Planning consulta catálogo y grafo publicado mediante su contrato de repositorio,
+inyectando `AuthorizedClient` desde la composición. El dominio valida referencias
+del modelo completo sin depender de Flutter. La caché condicional ETag permanece
+en infraestructura y se borra al terminar la sesión. La pantalla usa Cubit para
+retirar el modelo anterior durante la sincronización, impedir respuestas tardías
+y revalidar al volver al primer plano. Navigation conserva su búsqueda y cálculo
+de rutas; no importa el transporte REST de Planning. Véase [PR-244](PR-244.md).

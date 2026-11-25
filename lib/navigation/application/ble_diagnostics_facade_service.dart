@@ -30,6 +30,14 @@ class BleDiagnosticsFacadeService<T extends BleCaptureSession> {
 
   Future<void> stop() => bleDiagnosticsRepository.stop();
 
+  Future<bool> startReferenceAdvertiser(String beaconUuid) async {
+    if (!await blePermissionService.requestAdvertisePermission()) return false;
+    await bleDiagnosticsRepository.startReferenceAdvertiser(beaconUuid);
+    return true;
+  }
+
+  Future<void> stopReferenceAdvertiser() =>
+      bleDiagnosticsRepository.stopReferenceAdvertiser();
   Future<bool> exportCsv() => bleDiagnosticsRepository.exportCsv();
 
   Future<BleScanSnapshot> snapshot() => bleDiagnosticsRepository.snapshot();

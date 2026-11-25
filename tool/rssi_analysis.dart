@@ -10,10 +10,16 @@ void main(List<String> args) {
   if (args.length == 4 && args.first == 'select-run') {
     try {
       final output = File(args[2]);
-      if (output.existsSync()) throw const FormatException('El archivo de salida ya existe.');
-      final selected = codec.decode(File(args[1]).readAsStringSync())
-          .where((sample) => sample.runId == args[3]).toList();
-      if (selected.isEmpty) throw const FormatException('No hay muestras para esa sesión.');
+      if (output.existsSync()) {
+        throw const FormatException('El archivo de salida ya existe.');
+      }
+      final selected = codec
+          .decode(File(args[1]).readAsStringSync())
+          .where((sample) => sample.runId == args[3])
+          .toList();
+      if (selected.isEmpty) {
+        throw const FormatException('No hay muestras para esa sesión.');
+      }
       output.writeAsStringSync(codec.encode(selected));
       stdout.writeln('Muestras de ${args[3]}: ${selected.length}.');
     } on FormatException catch (error) {
@@ -47,6 +53,47 @@ void main(List<String> args) {
         'sin identidad verificable: ${result.unresolvedCount}.',
       );
     } on FormatException catch (error) {
+      stderr.writeln(error.message);
+      exitCode = 2;
+    }
+    return;
+  }
+
+  if (args.length == 2 && args.first == 'summarize') {
+    try {
+      final measurements = codec.decode(File(args[1]).readAsStringSync());
+      if (measurements.isEmpty) {
+        throw const FormatException('No hay lecturas RSSI en el archivo.');
+      }
+      const analyzer = RssiAnalysisService();
+      final entries = analyzer.summarize(measurements).entries.toList()
+        ..sort((a, b) {
+          final location = a.key.referenceLocation.compareTo(
+            b.key.referenceLocation,
+          );
+          if (location != 0) return location;
+          final condition = a.key.condition.compareTo(b.key.condition);
+          if (condition != 0) return condition;
+          return a.key.beaconId.toString().compareTo(b.key.beaconId.toString());
+        });
+      for (final entry in entries) {
+        final key = entry.key;
+        final statistics = entry.value;
+        stdout.writeln(
+          '${key.sourceId} | ${key.runId} | '
+          '${key.referenceLocation} | ${key.condition} | ${key.beaconId}: '
+          'n=${statistics.count}, '
+          'media=${statistics.meanDbm.toStringAsFixed(2)} dBm, '
+          'mediana=${statistics.medianDbm.toStringAsFixed(2)} dBm, '
+          'desviación=${statistics.standardDeviationDb.toStringAsFixed(2)} dB, '
+          'MAD=${statistics.medianAbsoluteDeviationDb.toStringAsFixed(2)} dB, '
+          'atípicas=${statistics.outlierCount}',
+        );
+      }
+    } on FormatException catch (error) {
+      stderr.writeln(error.message);
+      exitCode = 2;
+    } on FileSystemException catch (error) {
       stderr.writeln(error.message);
       exitCode = 2;
     }
@@ -93,6 +140,7 @@ void main(List<String> args) {
   stderr.writeln(
     'Uso:\n'
     '  dart run tool/rssi_analysis.dart normalize-android <fase1.csv> <comun.csv> <source_id> <run_id>\n'
+    '  dart run tool/rssi_analysis.dart summarize <comun.csv>\n'
     '  dart run tool/rssi_analysis.dart select-run <comun.csv> <sesion.csv> <run_id>\n'
     '  dart run tool/rssi_analysis.dart compare <calibracion.csv> <prueba.csv>',
   );

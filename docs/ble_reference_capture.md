@@ -33,3 +33,21 @@ Para normalizar el archivo nuevo: `dart run tool/rssi_analysis.dart normalize-an
 - **WI-SP01-01 (Julio):** la selección de balizas y los puntos físicos de referencia dependen de su escenario. Esta entrega no contiene mediciones físicas ni estimaciones de precisión.
 
 Las comprobaciones con hardware pendientes son: visibilidad de las balizas, concesión y revocación de permisos en versiones reales de Android, continuidad con pantalla bloqueada, comportamiento de direcciones aleatorias, interrupción por Bluetooth apagado y lectura del CSV después de recorridos reales.
+
+## Prueba de PR-198 con un teléfono como emisor
+
+No se necesitan balizas comerciales para el primer experimento. En un segundo teléfono Android compatible, abrir **Inicio → Diagnóstico BLE → Emisor BLE de referencia**, dejar el UUID de baliza de prueba o ingresar otro, conceder el permiso **Dispositivos cercanos** y pulsar **Emitir referencia BLE**. El teléfono anuncia una trama iBeacon `UUID/1/1` por radio. En el teléfono Rumbo receptor, pulsar **Descubrir 10 s**, seleccionar su dirección y capturar RSSI con la ubicación y condición anotadas. El anuncio iBeacon no contiene un UUID de servicio GATT; no usar el filtro de UUID de servicio para esta prueba. Registrar los puntos físicos medidos, por ejemplo 1 m, 3 m y 5 m, junto con línea de vista, pared y teléfono quieto/caminando. Repetir cada condición y detener ambos lados al terminar.
+
+La opción usa el emisor BLE del sistema Android; no inventa mediciones RSSI. Requiere Android 12 o posterior con Bluetooth LE Peripheral/Advertiser disponible. Una laptop alternativa debe emitir la misma trama iBeacon, no solo un servicio GATT. El CSV Android guarda `manufacturer_data=004C:0215...`; `normalize-android` reconoce esa identidad sin asignar MAC como identidad lógica. Cada emisor simultáneo necesita un UUID distinto. La comparación de huellas en `RssiAnalysisService` exige al menos dos emisores compartidos entre calibración y prueba; con uno solo se pueden estudiar dispersión y estabilidad, pero no concluir una ubicación. La distancia conocida se registra como referencia del ensayo; RSSI no se convierte a metros. El modo emisor es solo para diagnóstico y se detiene al salir de la pantalla o cerrar la actividad.
+
+El CSV v2 conserva `run_id`. Normalizarlo completo y usar `select-run` para separar las corridas antes de comparar. Para un emisor también puede resumirse una corrida ya seleccionada:
+
+```sh
+dart run tool/rssi_analysis.dart normalize-android rumbo_rssi_reference_v2.csv normalizado.csv telefono-1 legacy-only
+dart run tool/rssi_analysis.dart select-run normalizado.csv corrida-a-normalizada.csv <run_id>
+dart run tool/rssi_analysis.dart summarize corrida-a-normalizada.csv
+```
+
+El resumen muestra cantidad, media, mediana, desviación estándar, MAD y valores atípicos por ubicación, condición y baliza. Mantener la distancia física anotada fuera del CSV como referencia del ensayo. La estadística de señal no representa por sí sola error de posición en metros. Para evaluar ubicación, captar al menos dos emisores distintos en cada punto y usar corridas independientes de calibración y prueba con el comando `compare`.
+
+La calibración para comparar ubicación debe reunir lecturas de al menos dos puntos de referencia de la misma fuente y condición; puede combinar varias corridas conservando sus `run_id` y una sola cabecera CSV. El archivo de prueba debe contener una única corrida, ubicación y condición, excluida de la calibración. `select-run` permite separar esa prueba sin mezclar sesiones; `compare` rechaza un archivo de prueba con referencias mezcladas.
