@@ -27,6 +27,16 @@ include(":app")
 
 val unityLibraryDirectory = file("../../rumbo-ar-unity/Builds/Android/unityLibrary")
 if (unityLibraryDirectory.isDirectory) {
+    val unityProperties = java.util.Properties()
+    unityLibraryDirectory.parentFile.resolve("gradle.properties").takeIf { it.isFile }
+        ?.inputStream()?.use { unityProperties.load(it) }
+    gradle.beforeProject {
+        if (path == ":unityLibrary" || path.startsWith(":unityLibrary:")) {
+            unityProperties.stringPropertyNames()
+                .filter { it == "unityStreamingAssets" || it.startsWith("unity.") }
+                .forEach { extensions.extraProperties.set(it, unityProperties.getProperty(it)) }
+        }
+    }
     include(":unityLibrary")
     project(":unityLibrary").projectDir = unityLibraryDirectory
     unityLibraryDirectory.listFiles()?.filter { child ->

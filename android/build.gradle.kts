@@ -1,7 +1,12 @@
+val unityAarDirectory = findProject(":unityLibrary")?.file("libs")
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        if (unityAarDirectory?.isDirectory == true) {
+            flatDir { dirs(unityAarDirectory) }
+        }
     }
 }
 
