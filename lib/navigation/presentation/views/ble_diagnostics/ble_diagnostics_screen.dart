@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/models/android_ble_session_configuration.dart';
@@ -15,14 +17,20 @@ class BleDiagnosticsScreen extends StatefulWidget {
 
 class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
     with WidgetsBindingObserver {
+  late final BleDiagnosticsBloc _bloc;
   final _location = TextEditingController();
   final _condition = TextEditingController();
   final _serviceUuids = TextEditingController();
+  final _advertiserUuid = TextEditingController(text: 'e2c56db5-dffb-48d2-b060-d0f5a71096e0');
   final Set<String> _selectedAddresses = {};
+  bool _advertisingReference = false;
+  bool _advertiserBusy = false;
+  String _advertiserMessage = '';
 
   @override
   void initState() {
     super.initState();
+    _bloc = context.read<BleDiagnosticsBloc>();
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -36,9 +44,13 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (_advertisingReference) {
+      unawaited(_bloc.stopReferenceAdvertiser().catchError((_) {}));
+    }
     _location.dispose();
     _condition.dispose();
     _serviceUuids.dispose();
+    _advertiserUuid.dispose();
     super.dispose();
   }
 
@@ -59,13 +71,60 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
     }
   }
 
+  Future<void> _toggleReferenceAdvertiser() async {
+    if (_advertiserBusy) return;
+    setState(() {
+      _advertiserBusy = true;
+      _advertiserMessage = '';
+    });
+    try {
+      if (_advertisingReference) {
+        await _bloc.stopReferenceAdvertiser();
+        if (mounted) {
+          setState(() {
+            _advertisingReference = false;
+            _advertiserMessage = 'Anuncio de referencia detenido.';
+          });
+        }
+      } else {
+        final started = await _bloc.startReferenceAdvertiser(
+          _advertiserUuid.text.trim(),
+        );
+        if (!started) {
+          throw StateError(
+            'Concede el permiso Dispositivos cercanos en Android 12 o posterior.',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _advertisingReference = true;
+            _advertiserMessage =
+                'Emitiendo iBeacon UUID/1/1. Descúbrelo y selecciona su dirección en el receptor.';
+          });
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _advertiserMessage = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _advertiserBusy = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Diagnóstico BLE')),
       body: BlocBuilder<BleDiagnosticsBloc, BleDiagnosticsState>(
         builder: (context, state) {
-          final bloc = context.read<BleDiagnosticsBloc>();
+          final bloc = _bloc;
           return SafeArea(
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -73,6 +132,30 @@ class _BleDiagnosticsScreenState extends State<BleDiagnosticsScreen>
                 const Text(
                   'Herramienta de desarrollo: no es una pantalla final. '
                   'RSSI no equivale directamente a distancia.',
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Emisor BLE de referencia', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      const Text('Modo de prueba Android. Anuncia iBeacon UUID/1/1 por radio; mide RSSI desde otro teléfono.'),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _advertiserUuid,
+                        enabled: !_advertisingReference && !_advertiserBusy,
+                        decoration: const InputDecoration(labelText: 'UUID de baliza iBeacon', border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _advertiserBusy ? null : _toggleReferenceAdvertiser,
+                        icon: Icon(_advertisingReference ? Icons.stop : Icons.bluetooth),
+                        label: Text(_advertisingReference ? 'Detener emisión' : 'Emitir referencia BLE'),
+                      ),
+                      if (_advertiserMessage.isNotEmpty) SelectableText(_advertiserMessage),
+                    ]),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(

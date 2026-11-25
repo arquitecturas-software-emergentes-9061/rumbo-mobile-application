@@ -9,11 +9,13 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private lateinit var referenceAdvertiser: BleReferenceAdvertiser
     private var pendingCsvExport: MethodChannel.Result? = null
     private var pendingCsvFile: File? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        referenceAdvertiser = BleReferenceAdvertiser(applicationContext)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AR_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -57,6 +59,20 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "androidSdkVersion" -> result.success(Build.VERSION.SDK_INT)
+                "startReferenceAdvertiser" -> referenceAdvertiser.start(
+                    call.argument<String>("beaconUuid").orEmpty(),
+                ) { outcome ->
+                    runOnUiThread {
+                        outcome.fold(
+                            onSuccess = { result.success(null) },
+                            onFailure = { result.error("ADVERTISE_FAILED", it.message, null) },
+                        )
+                    }
+                }
+                "stopReferenceAdvertiser" -> {
+                    referenceAdvertiser.stop()
+                    result.success(null)
+                }
                 "snapshot" -> result.success(BleScanBus.snapshot(applicationContext))
                 "exportCsv" -> {
                     if (BleScanService.isReserved()) {
@@ -119,6 +135,11 @@ class MainActivity : FlutterActivity() {
                     BleScanBus.attach(null)
                 }
             })
+    }
+
+    override fun onDestroy() {
+        if (::referenceAdvertiser.isInitialized) referenceAdvertiser.stop()
+        super.onDestroy()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
