@@ -9,6 +9,7 @@ import 'package:rumbo_mobile_application/navigation/domain/entities/destination.
 import 'package:rumbo_mobile_application/navigation/presentation/views/destination/destination_detail_screen.dart';
 import '../../../iam/application/session_facade.dart';
 import '../../../iam/presentation/auth_screens.dart';
+import '../../../planning/presentation/published_models_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/route/route_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/search/search_screen.dart';
@@ -43,6 +44,10 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/planning/maps',
+      builder: (_, _) => const PublishedModelsScreen(),
+    ),
     if (kDebugMode &&
         !kIsWeb &&
         defaultTargetPlatform == TargetPlatform.android)
