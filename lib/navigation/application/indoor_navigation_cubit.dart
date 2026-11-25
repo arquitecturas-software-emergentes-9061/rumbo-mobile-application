@@ -68,8 +68,8 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
     DeviationService? deviation,
     DateTime Function()? clock,
     this.cooldown = const Duration(seconds: 15),
-    this.fixLifetime = const Duration(seconds: 35),
-  }) : filter = filter ?? RssiWindowService(),
+    this.fixLifetime = const Duration(seconds: 12),
+  }) : filter = filter ?? RssiWindowService(window: const Duration(seconds: 5)),
        deviation = deviation ?? DeviationService(),
        clock = clock ?? DateTime.now,
        super(const IndoorNavigationState());
@@ -88,7 +88,15 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
   DateTime? _lastResolution, _lastRouteRequest, _lastArEvent;
 
   Future<void> start(NavigationTarget target) async {
-    if (_starting || state.sessionId.isNotEmpty) return;
+    if (_starting) return;
+    if (state.sessionId.isNotEmpty) {
+      if (state.target?.siteId == target.siteId &&
+          state.target?.nodeId == target.nodeId) {
+        return;
+      }
+      await stop();
+      if (isClosed || _starting) return;
+    }
     _starting = true;
     final generation = ++_generation;
     emit(
@@ -98,6 +106,46 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
         message: 'Buscando balizas de la sede…',
       ),
     );
+    await _startScanner(target, generation);
+  }
+
+  Future<void> relocate() async {
+    final target = state.target;
+    if (target == null || _starting) return;
+    _starting = true;
+    final generation = ++_generation;
+    ++_routeRequest;
+    _timer?.cancel();
+    _timer = null;
+    try {
+      await _ble?.cancel();
+      _ble = null;
+      await scanner.stop();
+      if (generation != _generation || isClosed) {
+        _starting = false;
+        return;
+      }
+      filter.clear();
+      deviation.reset();
+      _lastResolution = null;
+      emit(
+        state.copy(
+          quality: LocationQuality.searching,
+          mode: GuidanceMode.map,
+          spatialReferenceReady: false,
+          recalculating: false,
+          message: 'Buscando una nueva referencia…',
+        ),
+      );
+    } catch (error) {
+      _starting = false;
+      if (!isClosed && generation == _generation) _fail(error);
+      return;
+    }
+    await _startScanner(target, generation);
+  }
+
+  Future<void> _startScanner(NavigationTarget target, int generation) async {
     try {
       _inventory = await repository.beacons(target.siteId);
       if (generation != _generation || isClosed) return;
@@ -155,7 +203,8 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
   void tick() {
     if (isClosed || state.sessionId.isEmpty) return;
     final samples = filter.snapshot(clock());
-    if (samples.isEmpty ||
+    if (state.quality == LocationQuality.error && samples.isEmpty) return;
+    if ((samples.length < 2 && state.mode != GuidanceMode.ar) ||
         (state.position != null &&
             clock().difference(state.position!.observedAt) > fixLifetime)) {
       deviation.reset();
@@ -182,7 +231,15 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
                 const Duration(seconds: 2))) {
       return;
     }
-    final signals = filter.snapshot(clock());
+    final now = clock();
+    final signals = filter
+        .snapshot(now)
+        .where(
+          (beacon) =>
+              beacon.filteredDeviation <= 6 &&
+              now.difference(beacon.observedAt) <= const Duration(seconds: 2),
+        )
+        .toList();
     if (signals.length < 2) return;
     _resolving = true;
     _lastResolution = clock();
@@ -192,6 +249,11 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
       if (isClosed || generation != _generation) return;
       if (position == null) {
         deviation.reset();
+        if (state.mode == GuidanceMode.ar &&
+            state.position != null &&
+            clock().difference(state.position!.observedAt) <= fixLifetime) {
+          return;
+        }
         emit(
           state.copy(
             quality: LocationQuality.lowConfidence,
@@ -259,11 +321,15 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
       return;
     }
     final progress = _tracker.match(route, position, previous: state.progress);
-    if (progress != null) {
+    if (progress != null &&
+        (state.mode != GuidanceMode.ar ||
+            progress.nodeIndex >= (state.progress?.nodeIndex ?? 0))) {
       emit(
         state.copy(
           progress: progress,
-          message: progress.floorChanged
+          message: progress.fraction == 1
+              ? 'Has llegado a tu destino.'
+              : progress.floorChanged
               ? 'Cambio de piso confirmado.'
               : 'Continúa por la ruta indicada.',
         ),
@@ -282,6 +348,7 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
       return;
     }
     if (deviation.update(route, position)) {
+      if (state.recalculating) return;
       emit(
         state.copy(
           routeInvalid: true,
@@ -289,6 +356,74 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
         ),
       );
       await recalculate();
+    }
+  }
+
+  void arOpened() {
+    if (!canOpenAr) return;
+    emit(state.copy(mode: GuidanceMode.ar, spatialReferenceReady: false));
+  }
+
+  bool get canOpenAr =>
+      state.canGuide &&
+      state.progress?.fraction != 1 &&
+      (state.position?.metersPerUnit ?? 0) > 0;
+
+  void arCalibrated() {
+    if (state.mode == GuidanceMode.ar) {
+      emit(state.copy(spatialReferenceReady: true));
+    }
+  }
+
+  void arCalibrationLost() {
+    if (state.mode == GuidanceMode.ar) {
+      emit(state.copy(spatialReferenceReady: false));
+    }
+  }
+
+  void returnToMap(String message, {bool fallback = false}) {
+    if (state.sessionId.isEmpty) return;
+    emit(
+      state.copy(
+        mode: fallback ? GuidanceMode.fallback : GuidanceMode.map,
+        spatialReferenceReady: false,
+        message: message,
+      ),
+    );
+  }
+
+  void acceptArProgress(String nodeId, {required bool arrived}) {
+    final route = state.route;
+    final position = state.position;
+    if (state.mode != GuidanceMode.ar ||
+        !state.spatialReferenceReady ||
+        route == null ||
+        position == null) {
+      return;
+    }
+    final index = route.nodes.indexWhere(
+      (node) =>
+          node.id == nodeId &&
+          node.floorId == position.floorId &&
+          node.planVersionId == position.planVersionId,
+    );
+    if (index < 0) return;
+    final reached = arrived ? index : index - 1;
+    if (reached < (state.progress?.nodeIndex ?? 0)) return;
+    final count = route.nodes.length;
+    if (arrived && index == count - 1) {
+      emit(state.copy(progress: RouteProgress(index, index - 1, 1, false)));
+    } else if (reached >= 0 && reached < count - 1) {
+      emit(
+        state.copy(
+          progress: RouteProgress(
+            reached,
+            reached,
+            reached / (count - 1),
+            false,
+          ),
+        ),
+      );
     }
   }
 
@@ -338,11 +473,17 @@ class IndoorNavigationCubit extends Cubit<IndoorNavigationState> {
           route.nodes.last.id != target.nodeId) {
         throw const NavigationFailure('La ruta no corresponde al destino.');
       }
+      final progress = _tracker.match(route, origin);
+      if (progress == null) {
+        throw const NavigationFailure(
+          'La ruta no corresponde al plano de origen.',
+        );
+      }
       deviation.reset();
       emit(
         state.copy(
           route: route,
-          progress: _tracker.match(route, origin),
+          progress: progress,
           routeInvalid: false,
           recalculating: false,
           message: 'Ruta actualizada. Puedes continuar.',

@@ -14,10 +14,11 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        RumboArBridge.registerHost(this)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AR_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "openDemo" -> {
+                "openDemo", "openNavigation" -> {
                     val heading = (call.argument<Number>("headingDegrees")?.toFloat() ?: 0f)
                     if (!heading.isFinite() || heading < 0f || heading >= 360f) {
                         result.error("INVALID_DIRECTION", "Dirección de prueba inválida.", null)
@@ -30,13 +31,25 @@ class MainActivity : FlutterActivity() {
                         ).firstNotNullOfOrNull { name ->
                             try { Class.forName(name) } catch (_: ClassNotFoundException) { null }
                         } ?: throw ClassNotFoundException("Unity activity not found")
+                        if (call.method == "openNavigation") {
+                            RumboArBridge.requestNavigation(call.argument<String>("destination") ?: "Tu destino")
+                        } else {
+                            RumboArBridge.requestDemo(heading)
+                        }
                         startActivityForResult(Intent(this, unityActivity).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                             putExtra("rumbo_demo_heading", heading)
+                            putExtra("rumbo_navigation", call.method == "openNavigation")
+                            if (call.method == "openNavigation") {
+                                putExtra("rumbo_destination", call.argument<String>("destination"))
+                            }
                         }, AR_REQUEST)
                         result.success(null)
                     } catch (_: ClassNotFoundException) {
+                        RumboArBridge.hideNavigation()
                         result.error("UNITY_NOT_LINKED", "Unity aún no está exportado e integrado en esta compilación.", null)
                     } catch (error: Exception) {
+                        RumboArBridge.hideNavigation()
                         result.error("AR_START_FAILED", error.message ?: "No se pudo abrir AR.", null)
                     }
                 }
@@ -44,9 +57,26 @@ class MainActivity : FlutterActivity() {
                     beginCsvExport(RumboArBridge.trackingLogFile(this), AR_CSV_FILE, result)
                 }
                 "suspend" -> {
+                    RumboArBridge.hideNavigation()
                     startActivity(Intent(this, MainActivity::class.java).apply {
                         addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     })
+                    result.success(null)
+                }
+                "sendNavigation" -> {
+                    try {
+                        RumboArBridge.send(
+                            call.argument<String>("receiver").orEmpty(),
+                            call.argument<String>("payload").orEmpty(),
+                        )
+                        result.success(null)
+                    } catch (error: Exception) {
+                        result.error("AR_MESSAGE_FAILED", "No se pudo actualizar la guía AR.", null)
+                    }
+                }
+                "updateHud" -> {
+                    RumboArBridge.updateHud(call.argument<String>("status").orEmpty(),
+                        call.argument<Int>("progress") ?: 0)
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -112,11 +142,17 @@ class MainActivity : FlutterActivity() {
                 }
                 "stop" -> {
                     if (BleScanService.isReserved()) {
-                        startService(Intent(this, BleScanService::class.java).apply {
-                            action = BleScanService.ACTION_STOP
-                        })
+                        try {
+                            BleScanService.afterStop { result.success(null) }
+                            if (!stopService(Intent(this, BleScanService::class.java))) {
+                                BleScanService.releaseStart()
+                            }
+                        } catch (_: Exception) {
+                            BleScanService.releaseStart()
+                        }
+                    } else {
+                        result.success(null)
                     }
-                    result.success(null)
                 }
                 else -> result.notImplemented()
             }

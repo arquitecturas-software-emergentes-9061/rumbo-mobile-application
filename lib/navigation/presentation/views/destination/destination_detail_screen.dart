@@ -102,8 +102,8 @@ class DestinationDetailScreen extends StatelessWidget {
         icon: Icons.apartment_outlined,
         label: 'Sede y piso',
         value: d.siteName == null
-            ? 'Piso ${d.floor}'
-            : 'Piso ${d.floor} • ${d.siteName}',
+            ? d.floorLabel
+            : '${d.floorLabel} • ${d.siteName}',
       ),
       if (d.specialist != null)
         _InfoRow(

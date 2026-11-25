@@ -1,7 +1,6 @@
 import 'package:rumbo_mobile_application/navigation/domain/entities/destination.dart';
 
-/// Modelo de transporte del directorio. Las claves son una suposición del
-/// contrato REST de Planning/Navigation hasta que la API publique el endpoint.
+/// Modelo de transporte del directorio de destinos publicados.
 class DestinationModel {
   const DestinationModel({
     required this.id,
@@ -29,7 +28,7 @@ class DestinationModel {
       nodeId: json['nodeId'] as String?,
       name: json['name'] as String,
       kind: json['kind'] as String,
-      floor: (json['floor'] as num).toInt(),
+      floor: (json['floor'] as num?)?.toInt(),
       zone: json['zone'] as String?,
       room: json['room'] as String?,
       siteName: json['siteName'] as String?,
@@ -38,7 +37,10 @@ class DestinationModel {
       estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
       distanceMeters: (json['distanceMeters'] as num?)?.toInt(),
       accessibleRouteNote: json['accessibleRouteNote'] as String?,
-      keywords: ((json['keywords'] as List?) ?? const []).cast<String>(),
+      keywords: [
+        ...((json['keywords'] as List?) ?? const []).cast<String>(),
+        if (json['specialty'] case final String specialty) specialty,
+      ],
       navigable: json['navigable'] as bool? ?? true,
     );
   }
@@ -47,7 +49,7 @@ class DestinationModel {
   final String? siteId, nodeId;
   final String name;
   final String kind;
-  final int floor;
+  final int? floor;
   final String? zone;
   final String? room;
   final String? siteName;

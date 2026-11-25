@@ -180,14 +180,16 @@ class BleScanService : Service() {
                 return
             }
             val settings = ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+                .setScanMode(if (navigation) ScanSettings.SCAN_MODE_LOW_LATENCY else ScanSettings.SCAN_MODE_BALANCED)
                 .setReportDelay(0L)
                 .build()
             windowResults = 0
             scanner!!.startScan(scanFilters, settings, scanCallback)
             scanning = true
             BleScanBus.updateStatus(if (discovery) "discovering" else "scanning")
-            handler.postDelayed({ finishWindow() }, if (discovery) DISCOVERY_MS else SCAN_MS)
+            if (!navigation) {
+                handler.postDelayed({ finishWindow() }, if (discovery) DISCOVERY_MS else SCAN_MS)
+            }
         } catch (error: SecurityException) {
             BleScanBus.updateStatus("permissionsDenied", "Permiso BLE revocado: ${error.message}")
             stopSelf()
@@ -216,6 +218,10 @@ class BleScanService : Service() {
     private fun handleResult(result: ScanResult) {
         if (!running || !scanning) return
         val now = System.currentTimeMillis()
+        if (!hasScanPermissions()) {
+            fail("Permiso BLE revocado.")
+            return
+        }
         val deviceId = result.device.address ?: return
         val name = result.scanRecord?.deviceName.orEmpty()
         val manufacturerData = manufacturerDataHex(result)
@@ -223,7 +229,12 @@ class BleScanService : Service() {
 
         if (now - (lastEmittedAt[deviceId] ?: 0L) >= EVENT_INTERVAL_MS) {
             lastEmittedAt[deviceId] = now
-            BleScanBus.observation(deviceId, name, result.rssi, now, manufacturerData)
+            val ageNanos = (android.os.SystemClock.elapsedRealtimeNanos() - result.timestampNanos)
+                .coerceAtLeast(0)
+            val observed = if (navigation && result.timestampNanos > 0) {
+                now - TimeUnit.NANOSECONDS.toMillis(ageNanos)
+            } else now
+            BleScanBus.observation(deviceId, name, result.rssi, observed, manufacturerData)
         }
         if (discovery || navigation || now - (lastRecordedAt[deviceId] ?: 0L) < SAMPLE_INTERVAL_MS) return
 
@@ -386,9 +397,16 @@ class BleScanService : Service() {
         private const val SAMPLE_INTERVAL_MS = 500L
         private const val EVENT_INTERVAL_MS = 500L
         private val reserved = AtomicBoolean(false)
+        private val stopCallbacks = mutableListOf<() -> Unit>()
 
         fun reserveStart(): Boolean = reserved.compareAndSet(false, true)
-        fun releaseStart() { reserved.set(false) }
+        fun afterStop(callback: () -> Unit) { stopCallbacks.add(callback) }
+        fun releaseStart() {
+            reserved.set(false)
+            val callbacks = stopCallbacks.toList()
+            stopCallbacks.clear()
+            callbacks.forEach { it() }
+        }
         fun isReserved(): Boolean = reserved.get()
     }
 }

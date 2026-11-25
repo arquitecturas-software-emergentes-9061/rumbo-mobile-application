@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../application/indoor_navigation_cubit.dart';
 import '../../../domain/entities/indoor_navigation.dart';
 import '../../../infrastructure/data_sources/ar_platform_bridge.dart';
+import '../../../infrastructure/data_sources/navigation_ar_coordinator.dart';
 
 class IndoorNavigationView extends StatefulWidget {
   const IndoorNavigationView({
@@ -22,36 +23,21 @@ class IndoorNavigationView extends StatefulWidget {
 
 class _IndoorNavigationViewState extends State<IndoorNavigationView> {
   final _site = TextEditingController(), _destination = TextEditingController();
-  StreamSubscription<Map<Object?, Object?>>? _tracking;
   final _ar = const ArPlatformBridge();
+  late final NavigationArCoordinator _coordinator;
   bool _avoidStairs = false;
   @override
   void initState() {
     super.initState();
     _site.text = widget.destination?.siteId ?? '';
     _destination.text = widget.destination?.nodeId ?? '';
-    _tracking = _ar.events.listen(
-      (event) {
-        if (widget.navigation.state.sessionId.isEmpty) return;
-        final accepted = widget.navigation.tracking(event);
-        if (accepted && {'limited', 'lost'}.contains(event['state'])) {
-          unawaited(_ar.suspend().catchError((Object _) {}));
-        }
-      },
-      onError: (Object error) {
-        widget.navigation.tracking({
-          'state': 'lost',
-          'timestampUtc': DateTime.now().toUtc().toIso8601String(),
-        });
-      },
-    );
+    _coordinator = NavigationArCoordinator(widget.navigation, _ar);
   }
 
   @override
   void didUpdateWidget(covariant IndoorNavigationView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.destination != oldWidget.destination &&
-        widget.navigation.state.sessionId.isEmpty) {
+    if (widget.destination != oldWidget.destination) {
       _site.text = widget.destination?.siteId ?? '';
       _destination.text = widget.destination?.nodeId ?? '';
     }
@@ -59,7 +45,7 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
 
   @override
   void dispose() {
-    _tracking?.cancel();
+    _coordinator.dispose();
     _site.dispose();
     _destination.dispose();
     super.dispose();
@@ -72,6 +58,9 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
     bloc: widget.navigation,
     builder: (context, state) {
       final color = Theme.of(context).colorScheme;
+      final meters = state.canGuide
+          ? state.route?.remainingMeters(state.progress?.nodeIndex ?? 0)
+          : null;
       return ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -112,7 +101,9 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
               ),
             ),
           ),
-          if (state.sessionId.isEmpty) ...[
+          if (state.sessionId.isEmpty ||
+              (widget.destination?.nodeId != null &&
+                  state.target?.nodeId != widget.destination?.nodeId)) ...[
             const SizedBox(height: 16),
             const Text(
               'Selecciona un destino del directorio para comenzar. Necesitamos reconocer tu ubicación antes de guiarte.',
@@ -166,13 +157,6 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
               },
             ),
           ],
-          if (state.position != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Piso: ${state.position!.floorId} · referencia: ${state.position!.nodeId}',
-              ),
-            ),
           if (state.routeInvalid && !state.recalculating)
             const Card(
               child: Padding(
@@ -201,6 +185,20 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
             ),
             LinearProgressIndicator(value: state.progress?.fraction ?? 0),
             Text('Destino: ${state.target?.name ?? ''}'),
+            if (meters != null && meters > 0)
+              Text('${meters.ceil()} m restantes según la ruta'),
+            if (_ar.isSupportedPlatform)
+              FilledButton.icon(
+                onPressed: widget.navigation.canOpenAr
+                    ? _coordinator.open
+                    : null,
+                icon: const Icon(Icons.view_in_ar),
+                label: Text(
+                  state.mode == GuidanceMode.fallback
+                      ? 'Volver a AR'
+                      : 'Ver en AR',
+                ),
+              ),
           ],
           if (state.mode == GuidanceMode.fallback)
             const Card(
@@ -214,9 +212,7 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
           if (state.sessionId.isNotEmpty) ...[
             TextButton(
               onPressed: () async {
-                final target = state.target;
-                await widget.navigation.stop();
-                if (target != null) await widget.navigation.start(target);
+                await widget.navigation.relocate();
               },
               child: const Text('Volver a localizar'),
             ),
@@ -231,9 +227,6 @@ class _IndoorNavigationViewState extends State<IndoorNavigationView> {
             TextButton(
               onPressed: () => widget.navigation.stop(),
               child: const Text('Finalizar recorrido'),
-            ),
-            const Text(
-              'AR de navegación requiere una referencia espacial alineada con el plano. El diagnóstico AR permanece disponible por separado.',
             ),
           ],
         ],
@@ -288,7 +281,8 @@ class IndoorRoutePainter extends CustomPainter {
       canvas.drawCircle(point(n.x, n.y), 5, paint);
     }
     final last = route.nodes.last;
-    if (last.floorId == position.floorId) {
+    if (last.floorId == position.floorId &&
+        last.planVersionId == position.planVersionId) {
       canvas.drawCircle(
         point(last.x, last.y),
         10,

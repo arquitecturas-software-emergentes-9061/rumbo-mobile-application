@@ -46,7 +46,7 @@ Para probar IAM desde Flutter Web con el backend local, inicia la API y usa un p
 flutter run -d chrome --web-port=4200 --dart-define=RUMBO_API_BASE_URL=http://localhost:8080
 ```
 
-Web utiliza `http://localhost:8080` por defecto si no se define la URL; Android emulador utiliza `http://10.0.2.2:8080`. El backend local permite por defecto el origen `http://localhost:4200`; si se usa otro host o puerto, hay que agregarlo a `CORS_ALLOWED_ORIGINS` del backend. El directorio remoto de destinos aún requiere alinear su endpoint y el identificador de sede con el contrato vigente de la API; para probar la interfaz sin esa integración, usa `--dart-define=RUMBO_USE_SAMPLE_DIRECTORY=true`.
+Web utiliza `http://localhost:8080` por defecto si no se define la URL y el emulador Android usa `http://10.0.2.2:8080` en debug. El backend local permite por defecto el origen web `http://localhost:4200`. Si se usa otro host o puerto, agrégalo a `CORS_ALLOWED_ORIGINS`. El directorio remoto carga destinos publicados con el token del paciente. Consulta [la guía de validación](docs/sprint2_navigation_validation.md) para preparar la sede y probar BLE y AR.
 
 ## Próximos pasos
 

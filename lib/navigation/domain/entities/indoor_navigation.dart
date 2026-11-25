@@ -13,11 +13,13 @@ class IndoorPosition {
     required this.y,
     required this.observedAt,
     required this.reliable,
+    this.metersPerUnit,
   });
   final String siteId, floorId, nodeId, modelVersionId, planVersionId;
   final double x, y;
   final DateTime observedAt;
   final bool reliable;
+  final double? metersPerUnit;
 }
 
 class RouteNode {
@@ -45,11 +47,28 @@ class PublishedRoute {
     required this.siteId,
     required this.modelVersionId,
     required List<RouteNode> nodes,
-  }) : nodes = List.unmodifiable(nodes) {
+    List<double?> legMeters = const [],
+  }) : nodes = List.unmodifiable(nodes),
+       legMeters = List.unmodifiable(legMeters) {
     if (nodes.isEmpty) throw const FormatException('Ruta sin nodos.');
   }
   final String siteId, modelVersionId;
   final List<RouteNode> nodes;
+  final List<double?> legMeters;
+
+  double? remainingMeters(int nodeIndex) {
+    if (legMeters.length != nodes.length - 1 ||
+        nodeIndex < 0 ||
+        nodeIndex >= nodes.length) {
+      return null;
+    }
+    var distance = 0.0;
+    for (final meters in legMeters.skip(nodeIndex)) {
+      if (meters == null || !meters.isFinite || meters < 0) return null;
+      distance += meters;
+    }
+    return distance;
+  }
 }
 
 class NavigationTarget {

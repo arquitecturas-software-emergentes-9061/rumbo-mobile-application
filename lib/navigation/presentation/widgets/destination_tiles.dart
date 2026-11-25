@@ -3,17 +3,21 @@ import 'package:rumbo_mobile_application/navigation/domain/entities/destination.
 import 'package:rumbo_mobile_application/navigation/presentation/utils/mockup_palette.dart';
 
 IconData iconForKind(DestinationKind kind) => switch (kind) {
-      DestinationKind.specialty => Icons.favorite_border,
-      DestinationKind.doctor => Icons.person_outline,
-      DestinationKind.laboratory => Icons.science_outlined,
-      DestinationKind.pharmacy => Icons.local_pharmacy_outlined,
-      DestinationKind.imaging => Icons.image_outlined,
-      DestinationKind.service => Icons.room_service_outlined,
-    };
+  DestinationKind.specialty => Icons.favorite_border,
+  DestinationKind.doctor => Icons.person_outline,
+  DestinationKind.laboratory => Icons.science_outlined,
+  DestinationKind.pharmacy => Icons.local_pharmacy_outlined,
+  DestinationKind.imaging => Icons.image_outlined,
+  DestinationKind.service => Icons.room_service_outlined,
+};
 
 /// Fila de "Destinos recientes": historial, título, ubicación y flecha.
 class RecentDestinationTile extends StatelessWidget {
-  const RecentDestinationTile({required this.destination, required this.onTap, super.key});
+  const RecentDestinationTile({
+    required this.destination,
+    required this.onTap,
+    super.key,
+  });
 
   final Destination destination;
   final VoidCallback onTap;
@@ -26,20 +30,31 @@ class RecentDestinationTile extends StatelessWidget {
       leading: const _SquareIcon(icon: Icons.history),
       title: Text(
         destination.name,
-        style: const TextStyle(color: MockupPalette.primary, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          color: MockupPalette.primary,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       subtitle: Text(
         destination.locationLabel,
         style: const TextStyle(color: MockupPalette.textMuted, fontSize: 12),
       ),
-      trailing: const Icon(Icons.arrow_forward, color: MockupPalette.textMuted, size: 20),
+      trailing: const Icon(
+        Icons.arrow_forward,
+        color: MockupPalette.textMuted,
+        size: 20,
+      ),
     );
   }
 }
 
 /// Tarjeta de resultado de búsqueda.
 class DestinationResultCard extends StatelessWidget {
-  const DestinationResultCard({required this.destination, required this.onTap, super.key});
+  const DestinationResultCard({
+    required this.destination,
+    required this.onTap,
+    super.key,
+  });
 
   final Destination destination;
   final VoidCallback onTap;
@@ -47,8 +62,8 @@ class DestinationResultCard extends StatelessWidget {
   String get _subtitle {
     final d = destination;
     final parts = d.kind == DestinationKind.doctor && d.room != null
-        ? ['Consultorio ${d.room}', 'Piso ${d.floor}', d.kind.singularLabel]
-        : ['Piso ${d.floor}', d.kind.singularLabel, if (d.zone != null) d.zone!];
+        ? ['Consultorio ${d.room}', d.floorLabel, d.kind.singularLabel]
+        : [d.floorLabel, d.kind.singularLabel, if (d.zone != null) d.zone!];
     return parts.join(' • ');
   }
 
@@ -81,7 +96,10 @@ class DestinationResultCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       _subtitle,
-                      style: const TextStyle(color: MockupPalette.textMuted, fontSize: 12),
+                      style: const TextStyle(
+                        color: MockupPalette.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

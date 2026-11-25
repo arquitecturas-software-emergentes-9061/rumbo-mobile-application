@@ -10,12 +10,14 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
   IndoorNavigationHttpRepository(
     this.client,
     this.configuration, {
-    this.originPath = const String.fromEnvironment('RUMBO_ORIGIN_PATH'),
+    this.originPath = const String.fromEnvironment(
+      'RUMBO_ORIGIN_PATH',
+      defaultValue: '/api/v1/navigation/sites/{siteId}/position',
+    ),
   });
   final http.Client client;
   final ApiConfiguration configuration;
 
-  /// Optional agreed service contract, not an assumed existing Backend endpoint.
   final String originPath;
   Future<dynamic> _request(
     String path, {
@@ -50,7 +52,9 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
           _ => 'No se pudo consultar Navigation. Reintenta.',
         }, code: code);
       }
-      return jsonDecode(utf8.decode(response.bodyBytes));
+      return response.statusCode == 204
+          ? null
+          : jsonDecode(utf8.decode(response.bodyBytes));
     } on NavigationFailure {
       rethrow;
     } on FormatException {
@@ -69,7 +73,7 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
   @override
   Future<Set<BeaconIdentifier>> beacons(String siteId) async {
     final rows = await _request(
-      '/api/v1/sites/${Uri.encodeComponent(siteId)}/beacons',
+      '/api/v1/navigation/sites/${Uri.encodeComponent(siteId)}/beacons',
     );
     if (rows is! List) {
       throw const NavigationFailure(
@@ -80,17 +84,9 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
     try {
       return rows
           .cast<Map<String, dynamic>>()
-          .where(
-            (b) =>
-                b['siteId'] == siteId &&
-                b['active'] == true &&
-                b['proximityUuid'] != null &&
-                b['x'] != null &&
-                b['y'] != null,
-          )
           .map(
             (b) => BeaconIdentifier(
-              uuid: b['proximityUuid'] as String,
+              uuid: b['uuid'] as String,
               major: b['major'] as int,
               minor: b['minor'] as int,
             ),
@@ -109,11 +105,10 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
     String siteId,
     List<FilteredBeacon> signals,
   ) async {
-    if (originPath.isEmpty) return null;
+    if (originPath.isEmpty || signals.length < 2) return null;
     final data = await _request(
       originPath.replaceAll('{siteId}', Uri.encodeComponent(siteId)),
       body: {
-        'siteId': siteId,
         'observations': signals
             .map(
               (s) => {
@@ -127,6 +122,7 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
             .toList(),
       },
     );
+    if (data == null) return null;
     if (data is! Map<String, dynamic>) {
       throw const NavigationFailure(
         'Referencia espacial incompatible.',
@@ -147,6 +143,7 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
         y: y,
         observedAt: DateTime.parse(data['observedAt'] as String).toUtc(),
         reliable: data['reliable'] == true,
+        metersPerUnit: (data['metersPerUnit'] as num?)?.toDouble(),
       );
     } catch (_) {
       throw const NavigationFailure(
@@ -207,6 +204,10 @@ class IndoorNavigationHttpRepository implements IndoorNavigationRepository {
         siteId: data['siteId'] as String,
         modelVersionId: data['modelVersionId'] as String,
         nodes: nodes,
+        legMeters: List<double?>.generate(
+          links.length,
+          (i) => (links[i]['distanceMeters'] as num?)?.toDouble(),
+        ),
       );
     } catch (_) {
       throw const NavigationFailure(

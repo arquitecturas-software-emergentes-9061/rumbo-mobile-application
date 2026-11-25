@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 
 class ArPlatformBridge {
   const ArPlatformBridge();
@@ -43,4 +44,19 @@ class ArPlatformBridge {
   Future<void> suspend() async {
     if (isSupportedPlatform) await _methods.invokeMethod<void>('suspend');
   }
+
+  Future<void> openNavigation(String destination) => _methods
+      .invokeMethod<void>('openNavigation', {'destination': destination});
+
+  Future<void> send(String receiver, Object payload) =>
+      _methods.invokeMethod<void>('sendNavigation', {
+        'receiver': receiver,
+        'payload': payload is String ? payload : jsonEncode(payload),
+      });
+
+  Future<void> updateHud(String status, int progress) =>
+      _methods.invokeMethod<void>('updateHud', {
+        'status': status,
+        'progress': progress,
+      });
 }

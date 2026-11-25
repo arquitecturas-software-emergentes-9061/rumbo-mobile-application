@@ -123,7 +123,7 @@ void _registerDestinationSearch() {
     () => useSample
         ? const DestinationSampleDataSource()
         : DestinationRemoteDataSource(
-            client: serviceLocator<http.Client>(),
+            client: serviceLocator<AuthorizedClient>(),
             configuration: serviceLocator<ApiConfiguration>(),
           ),
   );

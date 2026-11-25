@@ -31,8 +31,6 @@ class RouteTrackingService {
           n.planVersionId == position.planVersionId,
     );
     if (i < 0) return null;
-    // Large backward/forward jumps require repeated resolution rather than interpolation.
-    if (previous != null && (i - previous.nodeIndex).abs() > 1) return null;
     return RouteProgress(
       i,
       i < route.nodes.length - 1 ? i : (i - 1).clamp(0, i),

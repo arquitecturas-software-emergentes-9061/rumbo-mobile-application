@@ -13,6 +13,8 @@ import 'package:rumbo_mobile_application/navigation/domain/entities/indoor_navig
 import 'package:rumbo_mobile_application/navigation/domain/repositories/indoor_navigation_repository.dart';
 import 'package:rumbo_mobile_application/navigation/domain/services/rssi_window_service.dart';
 import 'package:rumbo_mobile_application/navigation/domain/services/route_tracking_service.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/ar_platform_bridge.dart';
+import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/navigation_ar_coordinator.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/repositories/indoor_navigation_http_repository.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/route/indoor_navigation_view.dart';
 import 'package:rumbo_mobile_application/shared/infrastructure/config/api_configuration.dart';
@@ -104,7 +106,90 @@ class Repository implements IndoorNavigationRepository {
   }
 }
 
+class ArTransport extends ArPlatformBridge {
+  final incoming = StreamController<Map<Object?, Object?>>.broadcast();
+  final messages = <String, Object>{};
+  @override
+  bool get isSupportedPlatform => true;
+  @override
+  Stream<Map<Object?, Object?>> get events => incoming.stream;
+  @override
+  Future<void> openNavigation(String destination) async {}
+  @override
+  Future<void> send(String receiver, Object payload) async {
+    messages[receiver] = payload;
+  }
+
+  @override
+  Future<void> updateHud(String status, int progress) async {}
+  @override
+  Future<void> suspend() async {}
+}
+
 void main() {
+  test(
+    'AR receives the real floor segment and returns to the same 2D session',
+    () async {
+      final now = DateTime.now().toUtc();
+      final scan = Scan(), ar = ArTransport();
+      final repo = Repository()..pending = Completer<PublishedRoute>();
+      repo.pending!.complete(
+        PublishedRoute(
+          siteId: 'site',
+          modelVersionId: 'v',
+          nodes: const [
+            RouteNode('a', 'f', 'p', 0, 0),
+            RouteNode('b', 'f', 'p', 10, 5),
+          ],
+        ),
+      );
+      final cubit = IndoorNavigationCubit(repo, scan, clock: () => now);
+      final coordinator = NavigationArCoordinator(cubit, ar);
+      addTearDown(() async {
+        coordinator.dispose();
+        await ar.incoming.close();
+        await cubit.close();
+        await scan.controller.close();
+      });
+      await cubit.start(target);
+      await cubit.acceptPosition(
+        IndoorPosition(
+          siteId: 'site',
+          floorId: 'f',
+          planVersionId: 'p',
+          modelVersionId: 'v',
+          nodeId: 'a',
+          x: 0,
+          y: 0,
+          reliable: true,
+          observedAt: now,
+          metersPerUnit: .2,
+        ),
+      );
+      final session = cubit.state.sessionId;
+      final route = cubit.state.route;
+      await coordinator.open();
+      ar.incoming.add({'state': 'navigation_ready', 'reason': 'android_host'});
+      await Future<void>.delayed(Duration.zero);
+      final sent = ar.messages['ReceiveRoute']! as Map<String, Object>;
+      expect(sent['destinationNodeId'], 'b');
+      expect((sent['nodes'] as List).last['position'], [10, -5, 0]);
+      ar.incoming.add({
+        'state': 'route_accepted',
+        'reason': 'sessionId=${sent['sessionId']}',
+      });
+      ar.incoming.add({'state': 'normal'});
+      await Future<void>.delayed(Duration.zero);
+      expect(ar.messages['ReceivePositionFix'], isNotNull);
+      ar.incoming.add({'state': 'show_map'});
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.mode, GuidanceMode.fallback);
+      expect(cubit.state.sessionId, session);
+      expect(cubit.state.route, same(route));
+      expect(scan.starts, 1);
+    },
+  );
+
   test(
     'window rejects unknown, duplicate, stale and invalid readings; robust output resists outliers',
     () {

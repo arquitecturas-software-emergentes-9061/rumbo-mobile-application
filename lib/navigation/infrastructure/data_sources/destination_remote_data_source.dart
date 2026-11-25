@@ -19,13 +19,12 @@ class DestinationRemoteDataSource implements DestinationDataSource {
     required http.Client client,
     required ApiConfiguration configuration,
     this.path = '/api/v1/navigation/destinations',
-  })  : _client = client,
-        _configuration = configuration;
+  }) : _client = client,
+       _configuration = configuration;
 
   final http.Client _client;
   final ApiConfiguration _configuration;
 
-  /// Ruta supuesta: confirmar con el contrato de la API (PR-215).
   final String path;
 
   @override
@@ -33,22 +32,33 @@ class DestinationRemoteDataSource implements DestinationDataSource {
     final uri = _configuration.baseUrl.resolve(path);
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: const {'Accept': 'application/json'});
+      response = await _client.get(
+        uri,
+        headers: const {'Accept': 'application/json'},
+      );
     } catch (_) {
-      throw const DestinationDirectoryException('No se pudo contactar al servidor.');
+      throw const DestinationDirectoryException(
+        'No se pudo contactar al servidor.',
+      );
     }
     if (response.statusCode != 200) {
-      throw DestinationDirectoryException('El directorio respondió ${response.statusCode}.');
+      throw DestinationDirectoryException(
+        'El directorio respondió ${response.statusCode}.',
+      );
     }
     try {
       final body = jsonDecode(utf8.decode(response.bodyBytes));
-      final items = body is List ? body : (body as Map<String, dynamic>)['items'] as List;
+      final items = body is List
+          ? body
+          : (body as Map<String, dynamic>)['items'] as List;
       return items
           .cast<Map<String, dynamic>>()
           .map(DestinationModel.fromJson)
           .toList();
     } catch (_) {
-      throw const DestinationDirectoryException('El directorio tiene un formato inesperado.');
+      throw const DestinationDirectoryException(
+        'El directorio tiene un formato inesperado.',
+      );
     }
   }
 }

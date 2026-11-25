@@ -44,7 +44,7 @@ class Destination {
   final String? siteId, nodeId;
   final String name;
   final DestinationKind kind;
-  final int floor;
+  final int? floor;
   final String? zone;
   final String? room;
   final String? siteName;
@@ -61,8 +61,8 @@ class Destination {
   final bool isNavigable;
 
   /// "Piso 2 · Zona B"
-  String get locationLabel =>
-      zone == null ? 'Piso $floor' : 'Piso $floor · $zone';
+  String get floorLabel => floor == null ? 'Piso sin nombre' : 'Piso $floor';
+  String get locationLabel => zone == null ? floorLabel : '$floorLabel · $zone';
 
   /// Un destino es válido para iniciar guiado si tiene identidad y es navegable.
   bool get isValid =>
