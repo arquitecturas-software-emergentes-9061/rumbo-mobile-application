@@ -1,8 +1,16 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+val rumboLocalInstall = providers.gradleProperty("rumboLocalInstall")
+    .orNull ?: localProperties.getProperty("rumboLocalInstall", "false")
 
 android {
     namespace = "com.uitopic.rumbo"
@@ -20,9 +28,16 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["rumboAppLabel"] = "Rumbo"
     }
 
     buildTypes {
+        debug {
+            if (rumboLocalInstall.toBoolean()) {
+                applicationIdSuffix = ".local"
+                manifestPlaceholders["rumboAppLabel"] = "Rumbo local"
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("debug")
         }
