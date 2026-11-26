@@ -8,6 +8,8 @@ import 'package:rumbo_mobile_application/navigation/presentation/views/ble_diagn
 import 'package:rumbo_mobile_application/navigation/domain/entities/destination.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/destination/destination_detail_screen.dart';
 import '../../../iam/application/session_facade.dart';
+import '../../../iam/application/password_recovery_service.dart';
+import '../../../iam/presentation/password_recovery_screen.dart';
 import '../../../iam/presentation/auth_screens.dart';
 import '../../../planning/presentation/published_models_screen.dart';
 import 'package:rumbo_mobile_application/navigation/presentation/views/home/home_screen.dart';
@@ -26,10 +28,22 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
       return path == '/session' ? null : '/session';
     }
     if (state is SessionExpired) {
-      return path == '/sign-in' ? null : '/sign-in';
+      return [
+            '/sign-in',
+            '/password-recovery',
+            '/password-reset',
+          ].contains(path)
+          ? null
+          : '/sign-in';
     }
     if (state is Unauthenticated) {
-      return ['/welcome', '/sign-in', '/sign-up'].contains(path)
+      return [
+            '/welcome',
+            '/sign-in',
+            '/sign-up',
+            '/password-recovery',
+            '/password-reset',
+          ].contains(path)
           ? null
           : '/welcome';
     }
@@ -44,6 +58,24 @@ GoRouter buildRouter(SessionFacade session) => GoRouter(
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/password-recovery',
+      builder: (_, state) => PasswordRecoveryScreen(
+        key: const ValueKey('password-recovery'),
+        recovery: serviceLocator<PasswordRecoveryService>(),
+        initialEmail: state.extra is String
+            ? state.extra as String
+            : session.email,
+      ),
+    ),
+    GoRoute(
+      path: '/password-reset',
+      builder: (_, _) => PasswordRecoveryScreen(
+        key: const ValueKey('password-reset'),
+        recovery: serviceLocator<PasswordRecoveryService>(),
+        confirm: true,
+      ),
+    ),
     GoRoute(
       path: '/planning/maps',
       builder: (_, _) => const PublishedModelsScreen(),

@@ -16,6 +16,9 @@ import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_sample_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/repositories/destination_repository_impl.dart';
 import 'iam/application/session_facade.dart';
+import 'iam/application/password_recovery_service.dart';
+import 'iam/domain/password_recovery_repository.dart';
+import 'iam/infrastructure/password_recovery_repository_impl.dart';
 import 'iam/application/authorized_client.dart';
 import 'iam/domain/session_repository.dart';
 import 'iam/infrastructure/auth_api.dart';
@@ -84,6 +87,12 @@ Future<void> setupDependencies() async {
   );
   serviceLocator.registerLazySingleton<SessionRepository>(
     () => SessionRepositoryImpl(serviceLocator(), serviceLocator()),
+  );
+  serviceLocator.registerLazySingleton<PasswordRecoveryRepository>(
+    () => PasswordRecoveryRepositoryImpl(serviceLocator<AuthApi>()),
+  );
+  serviceLocator.registerLazySingleton<PasswordRecoveryService>(
+    () => PasswordRecoveryService(serviceLocator<PasswordRecoveryRepository>()),
   );
   serviceLocator.registerLazySingleton<SessionFacade>(() {
     final session = SessionFacade(serviceLocator());
