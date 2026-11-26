@@ -252,13 +252,12 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     if (!registering)
                       TextButton(
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Contacta a soporte para recuperar tu contraseña.',
-                            ),
-                          ),
-                        ),
+                        onPressed: _busy
+                            ? null
+                            : () => context.go(
+                                '/password-recovery',
+                                extra: _email.text.trim(),
+                              ),
                         child: const Text('¿Olvidaste tu contraseña?'),
                       ),
                     const SizedBox(height: 24),
