@@ -1,6 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
 
 class ArPlatformBridge {
   const ArPlatformBridge();
@@ -19,16 +21,32 @@ class ArPlatformBridge {
     return _sharedEvents;
   }
 
-  Future<void> openDemo(double headingDegrees) async {
+  Future<void> openDemo(double headingDegrees) =>
+      _openWithCamera('openDemo', {'headingDegrees': headingDegrees});
+
+  Future<void> openNavigation(String destination) =>
+      _openWithCamera('openNavigation', {'destination': destination});
+
+  Future<void> _openWithCamera(
+    String method,
+    Map<String, Object> arguments,
+  ) async {
     if (!isSupportedPlatform) {
       throw PlatformException(
         code: 'UNSUPPORTED',
-        message: 'El prototipo AR requiere Android.',
+        message: 'La realidad aumentada requiere Android.',
       );
     }
-    await _methods.invokeMethod<void>('openDemo', {
-      'headingDegrees': headingDegrees,
-    });
+    // Android must grant access while Flutter is still in the foreground.
+    final permission = await Permission.camera.request();
+    if (!permission.isGranted) {
+      throw PlatformException(
+        code: 'CAMERA_PERMISSION_REQUIRED',
+        message:
+            'Permite el acceso a la cámara para usar la realidad aumentada.',
+      );
+    }
+    await _methods.invokeMethod<void>(method, arguments);
   }
 
   Future<bool> exportTrackingCsv() async {
@@ -44,9 +62,6 @@ class ArPlatformBridge {
   Future<void> suspend() async {
     if (isSupportedPlatform) await _methods.invokeMethod<void>('suspend');
   }
-
-  Future<void> openNavigation(String destination) => _methods
-      .invokeMethod<void>('openNavigation', {'destination': destination});
 
   Future<void> send(String receiver, Object payload) =>
       _methods.invokeMethod<void>('sendNavigation', {

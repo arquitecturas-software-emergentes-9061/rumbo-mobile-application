@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
+
 import '../../application/indoor_navigation_cubit.dart';
 import '../../domain/entities/indoor_navigation.dart';
 import 'ar_platform_bridge.dart';
@@ -73,16 +75,26 @@ class NavigationArCoordinator {
     _status = 'Preparando cámara…';
     active = true;
     navigation.arOpened();
-    _scheduleFallback(
-      const Duration(seconds: 18),
-      'La cámara no pudo iniciar el tracking. Continúa en 2D.',
-    );
     try {
       await bridge.openNavigation(state.target?.name ?? 'Tu destino');
-    } catch (_) {
+      if (_generation != generation) return;
+      if (!active) {
+        await bridge.suspend();
+      } else if (!_everTracked) {
+        _scheduleFallback(
+          const Duration(seconds: 18),
+          'La cámara no pudo iniciar el tracking. Continúa en 2D.',
+        );
+      }
+    } catch (error) {
       if (active && _generation == generation) {
+        final message =
+            error is PlatformException &&
+                error.code == 'CAMERA_PERMISSION_REQUIRED'
+            ? error.message
+            : null;
         await _fallback(
-          'La guía AR no está disponible en este dispositivo.',
+          message ?? 'La guía AR no está disponible en este dispositivo.',
           suspend: false,
         );
       }
