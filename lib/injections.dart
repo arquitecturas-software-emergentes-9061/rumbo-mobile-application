@@ -15,6 +15,9 @@ import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_remote_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/data_sources/destination_sample_data_source.dart';
 import 'package:rumbo_mobile_application/navigation/infrastructure/repositories/destination_repository_impl.dart';
+import 'communications/application/notification_center_cubit.dart';
+import 'communications/domain/notification_repository.dart';
+import 'communications/infrastructure/notification_http_repository.dart';
 import 'iam/application/session_facade.dart';
 import 'iam/application/authorized_client.dart';
 import 'iam/domain/session_repository.dart';
@@ -115,6 +118,15 @@ Future<void> setupDependencies() async {
   );
   serviceLocator.registerFactory<SessionCubit>(
     () => SessionCubit(serviceLocator()),
+  );
+  serviceLocator.registerLazySingleton<NotificationRepository>(
+    () => NotificationHttpRepository(
+      serviceLocator<AuthorizedClient>(),
+      serviceLocator<ApiConfiguration>(),
+    ),
+  );
+  serviceLocator.registerFactory<NotificationCenterCubit>(
+    () => NotificationCenterCubit(serviceLocator<NotificationRepository>()),
   );
 
   _registerDestinationSearch();
